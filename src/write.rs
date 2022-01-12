@@ -54,12 +54,7 @@ fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
                                     None => false,
                                 })
                                 .unwrap();
-                            //index = i + i2;
-                            //println!("Found at index {}, i is {}, i2 is {}", index, i, i2);
-                            //if index > i {
-                            //    println!("SET INDEX, THIS SHOULD ONLY APPEAR ONCE! {}", index);
                             break;
-                            //}
                         }
                     }
                     None => {}
