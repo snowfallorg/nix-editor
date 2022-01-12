@@ -1,4 +1,4 @@
-use argparse::{ArgumentParser, List, Store, StoreTrue}; //switch to clap
+use argparse::{ArgumentParser, List, Store, StoreTrue};
 use std::fs;
 use std::io::{stderr, stdout};
 use std::str::FromStr;
