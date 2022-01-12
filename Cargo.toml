@@ -1,0 +1,12 @@
+[package]
+name = "nix-editor"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde_json = "1.0.74"
+argparse = "0.2.2"
+rnix = "0.10.1"
+rowan = "0.15.2"
