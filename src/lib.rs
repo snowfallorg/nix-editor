@@ -1,3 +1,6 @@
+use rnix::SyntaxNode;
+use std::io::Write;
+
 pub mod read;
 pub mod write;
 
@@ -17,4 +20,10 @@ pub fn printread(file: String, query: String) {
         Some(serde_json::Value::Null) => println!("null"),
         None => println!("Attribute \"{}\" is not set", query),
     }
+}
+
+pub fn writetofile(file: &str, node: &SyntaxNode) {
+    let outtext = node.to_string();
+    let mut outfile = std::fs::File::create(file).expect("create failed");
+    outfile.write_all(outtext.as_bytes()).expect("write failed");
 }

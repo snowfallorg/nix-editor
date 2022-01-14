@@ -1,7 +1,7 @@
 use rnix::{self, SyntaxKind, SyntaxNode};
 use std::io::Write;
 
-pub fn write(f: &str, query: &str, val: &str, out: &str) {
+pub fn write(f: &str, query: &str, val: &str) -> SyntaxNode {
     let ast = rnix::parse(&f);
     let configbase = match getcfgbase(&ast.node()) {
         Some(x) => x,
@@ -10,16 +10,13 @@ pub fn write(f: &str, query: &str, val: &str, out: &str) {
             std::process::exit(1);
         }
     };
-    let output = match findattr(&configbase, &query) {
+    match findattr(&configbase, &query) {
         Some(x) => modvalue(&x, &val).unwrap(),
         None => {
             println!("No config key found, adding value");
             addvalue(&configbase, &query, &val)
         }
-    };
-    let outtext = output.to_string();
-    let mut outfile = std::fs::File::create(out).expect("create failed");
-    outfile.write_all(outtext.as_bytes()).expect("write failed");
+    }
 }
 
 fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
@@ -191,7 +188,7 @@ fn getcfgbase(node: &SyntaxNode) -> Option<SyntaxNode> {
     return None;
 }
 
-pub fn deref(f: &str, query: &str, out: &str) {
+pub fn deref(f: &str, query: &str) -> SyntaxNode {
     let ast = rnix::parse(&f);
     let configbase = match getcfgbase(&ast.node()) {
         Some(x) => x,
@@ -200,16 +197,13 @@ pub fn deref(f: &str, query: &str, out: &str) {
             std::process::exit(1);
         }
     };
-    let output = match findattr(&configbase, &query) {
+    match findattr(&configbase, &query) {
         Some(x) => deref_aux(&configbase, &x).unwrap(),
         None => {
             println!("No config key found");
             std::process::exit(1);
         }
-    };
-    let outtext = output.to_string();
-    let mut outfile = std::fs::File::create(out).expect("create failed");
-    outfile.write_all(outtext.as_bytes()).expect("write failed");
+    }
 }
 
 fn deref_aux(configbase: &SyntaxNode, node: &SyntaxNode) -> Option<SyntaxNode> {

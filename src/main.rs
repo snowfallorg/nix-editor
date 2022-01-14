@@ -48,7 +48,7 @@ fn write_command(file: String, query: String, args: Vec<String>) {
     }
     let f = fs::read_to_string(&file).expect("Fail to read file");
 
-    match (val.is_empty(), deref) {
+    let output = match (val.is_empty(), deref) {
         (true, false) => {
             println!("No value specified");
             std::process::exit(1);
@@ -57,13 +57,10 @@ fn write_command(file: String, query: String, args: Vec<String>) {
             println!("Cannot write and dereference at the same time");
             std::process::exit(1);
         }
-        (false, false) => {
-            nix_editor::write::write(&f, &query, &val, &out);
-        }
-        (true, true) => {
-            nix_editor::write::deref(&f, &query, &out);
-        }
-    }
+        (false, false) => nix_editor::write::write(&f, &query, &val),
+        (true, true) => nix_editor::write::deref(&f, &query),
+    };
+    nix_editor::writetofile(&out, &output)
 }
 
 fn read_command(file: String, query: String) {
