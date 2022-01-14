@@ -1,22 +1,23 @@
 use rnix::{self, SyntaxKind, SyntaxNode};
-use std::io::Write;
 
-pub fn write(f: &str, query: &str, val: &str) -> SyntaxNode {
+pub enum WriteError {
+    ParseError,
+    NoAttr,
+}
+
+pub fn write(f: &str, query: &str, val: &str) -> Result<String, WriteError> {
     let ast = rnix::parse(&f);
     let configbase = match getcfgbase(&ast.node()) {
         Some(x) => x,
         None => {
-            println!("No config base found");
-            std::process::exit(1);
+            return Err(WriteError::ParseError);
         }
     };
-    match findattr(&configbase, &query) {
+    let outnode = match findattr(&configbase, &query) {
         Some(x) => modvalue(&x, &val).unwrap(),
-        None => {
-            println!("No config key found, adding value");
-            addvalue(&configbase, &query, &val)
-        }
-    }
+        None => addvalue(&configbase, &query, &val),
+    };
+    Ok(outnode.to_string())
 }
 
 fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
@@ -32,13 +33,7 @@ fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
                     None => false,
                 })
                 .unwrap();
-            println!("i is equal to: {}", i);
             let configafter = &configbase.green().children().collect::<Vec<_>>()[i..];
-            println!(
-                "Configafter: {:?}\n Length: {}",
-                configafter,
-                configafter.len()
-            );
             for child in configafter {
                 match child.as_token() {
                     Some(x) => {
@@ -84,7 +79,6 @@ fn matchval(configbase: &SyntaxNode, query: &str, acc: usize) -> Option<SyntaxNo
                     let key = getkey(&subchild);
                     if key.len() >= q.len() {
                         if &key[..q.len()] == q {
-                            println!("Found key: {:?}", &key);
                             return Some(child.clone());
                         }
                     }
@@ -104,13 +98,13 @@ fn modvalue(node: &SyntaxNode, val: &str) -> Option<SyntaxNode> {
     for child in node.children() {
         if child.kind() != SyntaxKind::NODE_KEY {
             let c = &child.clone();
-            let mut input = val.to_string();
-            if child.kind() == SyntaxKind::NODE_STRING
+            let input = val.to_string();
+            /* if child.kind() == SyntaxKind::NODE_STRING
             /* && check if quotes are already passed */
             {
                 input = format!("\"{}\"", input);
             }
-            // Add a check for valid lists
+            // Add a check for valid lists */
             let rep = &rnix::parse(&input)
                 .node()
                 .children()
@@ -188,22 +182,17 @@ fn getcfgbase(node: &SyntaxNode) -> Option<SyntaxNode> {
     return None;
 }
 
-pub fn deref(f: &str, query: &str) -> SyntaxNode {
+pub fn deref(f: &str, query: &str) -> Result<String, WriteError> {
     let ast = rnix::parse(&f);
     let configbase = match getcfgbase(&ast.node()) {
         Some(x) => x,
-        None => {
-            println!("No config base found");
-            std::process::exit(1);
-        }
+        None => return Err(WriteError::ParseError),
     };
-    match findattr(&configbase, &query) {
+    let outnode = match findattr(&configbase, &query) {
         Some(x) => deref_aux(&configbase, &x).unwrap(),
-        None => {
-            println!("No config key found");
-            std::process::exit(1);
-        }
-    }
+        None => return Err(WriteError::NoAttr),
+    };
+    Ok(outnode.to_string())
 }
 
 fn deref_aux(configbase: &SyntaxNode, node: &SyntaxNode) -> Option<SyntaxNode> {

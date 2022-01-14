@@ -1,7 +1,12 @@
 use serde_json::{self, Value};
 use std::process::Command;
 
-pub fn readvalue(file: &String, query: &String) -> Option<Value> {
+pub enum ReadError {
+    ParseError,
+    NoAttr,
+}
+
+pub fn readvalue(file: &str, query: &str) -> Result<Value, ReadError> {
     let output = Command::new("nix-instantiate")
         .arg("-E")
         .arg(format!(
@@ -12,12 +17,21 @@ pub fn readvalue(file: &String, query: &String) -> Option<Value> {
         .arg("--json")
         .arg("--strict")
         .output()
-        .expect("Failed");
+        .expect("nix-instantiate failed");
+    /*if !&output.status.success() {
+        return Err(ReadError::ParseError);
+    }*/
     let outstr = String::from_utf8_lossy(&output.stdout);
-    let res: serde_json::Value = serde_json::from_str(&outstr).expect("Unable to parse");
+    let res: serde_json::Value = match serde_json::from_str(&outstr) {
+        Ok(x) => x,
+        Err(_) => return Err(ReadError::ParseError),
+    };
     let qlist = query.split(".");
     let vec = qlist.collect::<Vec<&str>>();
-    valfromjson(vec, &res)
+    match valfromjson(vec, &res) {
+        Some(x) => Ok(x),
+        None => return Err(ReadError::NoAttr),
+    }
 }
 
 fn valfromjson<'a>(lst: Vec<&str>, j: &'a serde_json::Value) -> Option<serde_json::Value> {

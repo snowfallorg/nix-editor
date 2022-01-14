@@ -1,103 +1,69 @@
-use argparse::{ArgumentParser, List, Store, StoreTrue};
-use std::fs;
-use std::io::{stderr, stdout};
-use std::str::FromStr;
+use clap::{self, ArgGroup, Parser};
+use nix_editor::{printread, write::deref, write::write};
+use std::{fs, path::Path};
+#[derive(Parser)]
+#[clap(author, version, about, long_about = None)]
+#[clap(group(
+    ArgGroup::new("write")
+        .args(&["val", "deref"]),
+))]
+struct Args {
+    /// Configuration file to read
+    file: String,
 
-#[allow(non_camel_case_types)]
-#[derive(Debug)]
-enum Cmd {
-    read,
-    write,
-}
+    /// Nix configuration option arribute
+    attribute: String,
 
-impl FromStr for Cmd {
-    type Err = ();
-    fn from_str(src: &str) -> Result<Cmd, ()> {
-        return match src {
-            "read" => Ok(Cmd::read),
-            "write" => Ok(Cmd::write),
-            _ => Err(()),
-        };
-    }
-}
+    /// Value to write
+    #[clap(short, long)]
+    val: Option<String>,
 
-fn write_command(file: String, query: String, args: Vec<String>) {
-    let mut val = String::new();
-    let mut out = String::new();
-    let mut deref = false;
-    {
-        let mut ap = ArgumentParser::new();
-        ap.set_description("Write config option");
-        ap.refer(&mut val)
-            .add_option(&["-v", "--value"], Store, "Value to write");
-        ap.refer(&mut deref)
-            .add_option(&["-d", "--dereference"], StoreTrue, "Value to write");
-        ap.refer(&mut out)
-            .add_option(
-                &["-o", "--output"],
-                Store,
-                "Output file for modified config file to write",
-            )
-            .required();
-        match ap.parse(args, &mut stdout(), &mut stderr()) {
-            Ok(()) => {}
-            Err(x) => {
-                std::process::exit(x);
-            }
-        }
-    }
-    let f = fs::read_to_string(&file).expect("Fail to read file");
+    /// Dereference the value of the query
+    #[clap(short, long)]
+    deref: bool,
 
-    let output = match (val.is_empty(), deref) {
-        (true, false) => {
-            println!("No value specified");
-            std::process::exit(1);
-        }
-        (false, true) => {
-            println!("Cannot write and dereference at the same time");
-            std::process::exit(1);
-        }
-        (false, false) => nix_editor::write::write(&f, &query, &val),
-        (true, true) => nix_editor::write::deref(&f, &query),
-    };
-    nix_editor::writetofile(&out, &output)
-}
-
-fn read_command(file: String, query: String) {
-    nix_editor::printread(file, query)
+    /// Output file for modified config or read value
+    #[clap(short, long)]
+    output: Option<String>,
 }
 
 fn main() {
-    let mut subcommand = Cmd::read;
-    let mut verbose = false;
-    let mut file = "".to_string();
-    let mut query = "".to_string();
-    let mut args = vec![];
-    {
-        let mut ap = ArgumentParser::new();
-        ap.set_description("Read and modify nixos configuration files");
-        ap.refer(&mut verbose)
-            .add_option(&["-v", "--verbose"], StoreTrue, "Be verbose");
-        ap.refer(&mut file)
-            .required()
-            .add_option(&["-f", "--file"], Store, "Config file");
-        ap.refer(&mut subcommand).required().add_argument(
-            "command",
-            Store,
-            r#"Command "read" or "write" required"#,
-        );
-        ap.set_description("Reads an option from a config file");
-        ap.refer(&mut query)
-            .required()
-            .add_option(&["-q", "--query"], Store, r#"Option query"#);
-        ap.refer(&mut args)
-            .add_argument("arguments", List, r#"Arguments for command"#);
-        ap.stop_on_first_argument(true);
-        ap.parse_args_or_exit();
+    let args = Args::parse();
+    let output;
+    if !Path::is_file(Path::new(&args.file)) {
+        nix_editor::nofileerr(&args.file);
+        std::process::exit(1);
     }
-    args.insert(0, format!("subcommand {:?}", subcommand));
-    match subcommand {
-        Cmd::read => read_command(file, query),
-        Cmd::write => write_command(file, query, args),
+    let f = fs::read_to_string(&args.file).expect("Failed to read file");
+    if args.val.is_some() {
+        output = match write(&f, &args.attribute, &args.val.unwrap()) {
+            Ok(x) => x,
+            Err(e) => {
+                nix_editor::writeerr(e, &args.file, &args.attribute);
+                std::process::exit(1)
+            }
+        };
+    } else if args.deref {
+        output = match deref(&f, &args.attribute) {
+            Ok(x) => x,
+            Err(e) => {
+                nix_editor::writeerr(e, &args.file, &args.attribute);
+                std::process::exit(1)
+            }
+        };
+    } else {
+        output = match printread(&args.file, &args.attribute) {
+            Ok(x) => x,
+            Err(e) => {
+                nix_editor::readerr(e, &args.file, &args.attribute);
+                std::process::exit(1)
+            }
+        };
+    }
+
+    if args.output.is_some() {
+        nix_editor::writetofile(&args.output.unwrap(), &output)
+    } else {
+        println!("{}", output);
     }
 }

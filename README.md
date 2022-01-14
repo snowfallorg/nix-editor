@@ -7,18 +7,17 @@ nix run github:vlinkz/nix-editor -- --help
 ```
 
 ```
-Usage:
-  nix-editor [OPTIONS] COMMAND [ARGUMENTS ...]
+USAGE:
+    nix-editor [OPTIONS] <FILE> <ATTRIBUTE>
 
-Reads an option from a config file
+ARGS:
+    <FILE>         Configuration file to read
+    <ATTRIBUTE>    Nix configuration option arribute
 
-Positional arguments:
-  command               Command "read" or "write" required
-  arguments             Arguments for command
-
-Optional arguments:
-  -h,--help             Show this help message and exit
-  -v,--verbose          Be verbose
-  -f,--file FILE        Config file
-  -q,--query QUERY      Option query
+OPTIONS:
+    -d, --deref              Dereference the value of the query
+    -h, --help               Print help information
+    -o, --output <OUTPUT>    Output file for modified config or read value
+    -v, --val <VAL>          Value to write
+    -V, --version            Print version information
 ```
