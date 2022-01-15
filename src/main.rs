@@ -18,7 +18,7 @@ struct Args {
     #[clap(short, long)]
     val: Option<String>,
 
-    /// Dereference the value of the query
+    /// Dereference the value of the attribute
     #[clap(short, long)]
     deref: bool,
 
