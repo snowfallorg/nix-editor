@@ -109,8 +109,19 @@ fn modvalue(node: &SyntaxNode, val: &str) -> Option<SyntaxNode> {
                 .node()
                 .children()
                 .collect::<Vec<SyntaxNode>>()[0];
-            let replaced = c.replace_with(rep.green().to_owned());
-            let rnode = rnix::parse(&replaced.to_string()).node();
+            let index = node
+                .green()
+                .children()
+                .position(|y| match y.into_node() {
+                    Some(y) => y.to_owned() == c.green().to_owned(),
+                    None => false,
+                })
+                .unwrap();
+            let replaced = node
+                .green()
+                .replace_child(index, rnix::NodeOrToken::Node(rep.green().to_owned()));
+            let out = node.replace_with(replaced);
+            let rnode = rnix::parse(&out.to_string()).node();
             return Some(rnode);
         }
     }
