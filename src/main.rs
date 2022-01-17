@@ -1,11 +1,11 @@
 use clap::{self, ArgGroup, Parser};
-use nix_editor::{printread, write::deref, write::write};
+use nix_editor::{printevalread, printread, write::deref, write::write};
 use std::{fs, path::Path};
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 #[clap(group(
     ArgGroup::new("write")
-        .args(&["val", "deref"]),
+        .args(&["val", "deref","eval"]),
 ))]
 struct Args {
     /// Configuration file to read
@@ -25,6 +25,10 @@ struct Args {
     /// Output file for modified config or read value
     #[clap(short, long)]
     output: Option<String>,
+
+    /// Show the evaluated value of the attribute
+    #[clap(short, long)]
+    eval: bool,
 }
 
 fn main() {
@@ -51,8 +55,16 @@ fn main() {
                 std::process::exit(1)
             }
         };
+    } else if args.eval {
+        output = match printevalread(&args.file, &args.attribute) {
+            Ok(x) => x,
+            Err(e) => {
+                nix_editor::readerr(e, &args.file, &args.attribute);
+                std::process::exit(1)
+            }
+        };
     } else {
-        output = match printread(&args.file, &args.attribute) {
+        output = match printread(&f, &args.attribute) {
             Ok(x) => x,
             Err(e) => {
                 nix_editor::readerr(e, &args.file, &args.attribute);

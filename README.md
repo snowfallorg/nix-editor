@@ -15,7 +15,8 @@ ARGS:
     <ATTRIBUTE>    Nix configuration option arribute
 
 OPTIONS:
-    -d, --deref              Dereference the value of the query
+    -d, --deref              Dereference the value of the attribute
+    -e, --eval               Show the evaluated value of the attribute
     -h, --help               Print help information
     -o, --output <OUTPUT>    Output file for modified config or read value
     -v, --val <VAL>          Value to write

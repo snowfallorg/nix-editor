@@ -1,3 +1,5 @@
+use crate::parse::{findattr, getcfgbase};
+use rnix::{SyntaxKind, SyntaxNode};
 use serde_json::{self, Value};
 use std::process::Command;
 
@@ -6,7 +8,35 @@ pub enum ReadError {
     NoAttr,
 }
 
-pub fn readvalue(file: &str, query: &str) -> Result<Value, ReadError> {
+pub fn readvalue(f: &str, query: &str) -> Result<String, ReadError> {
+    let ast = rnix::parse(&f);
+    let configbase = match getcfgbase(&ast.node()) {
+        Some(x) => x,
+        None => {
+            return Err(ReadError::ParseError);
+        }
+    };
+    let outnode = match findattr(&configbase, &query) {
+        Some(x) => match findvalue(&x) {
+            Some(y) => y.to_string(),
+            None => return Err(ReadError::NoAttr),
+        },
+        None => return Err(ReadError::NoAttr),
+    };
+    Ok(outnode)
+}
+
+fn findvalue(node: &SyntaxNode) -> Option<SyntaxNode> {
+    // First find the IDENT node
+    for child in node.children() {
+        if child.kind() != SyntaxKind::NODE_KEY {
+            return Some(child);
+        }
+    }
+    return None;
+}
+
+pub fn readevalvalue(file: &str, query: &str) -> Result<Value, ReadError> {
     let output = Command::new("nix-instantiate")
         .arg("-E")
         .arg(format!(

@@ -1,10 +1,18 @@
 use colored::*;
 use std::io::Write;
+pub mod parse;
 pub mod read;
 pub mod write;
 
-pub fn printread(file: &str, attr: &str) -> Result<String, read::ReadError> {
-    let outval = match read::readvalue(file, attr) {
+pub fn printread(f: &str, attr: &str) -> Result<String, read::ReadError> {
+    match read::readvalue(f, attr) {
+        Ok(x) => Ok(x),
+        Err(e) => return Err(e),
+    }
+}
+
+pub fn printevalread(file: &str, attr: &str) -> Result<String, read::ReadError> {
+    let outval = match read::readevalvalue(file, attr) {
         Ok(x) => x,
         Err(e) => return Err(e), /*{
                                      let msg = format!(
@@ -16,16 +24,12 @@ pub fn printread(file: &str, attr: &str) -> Result<String, read::ReadError> {
                                  }*/
     };
     Ok(match outval {
-        serde_json::Value::Bool(b) => format!("bool: {}", b),
-        serde_json::Value::Number(n) => format!("number: {}", n),
-        serde_json::Value::String(s) => format!("string: {}", s),
-        serde_json::Value::Array(a) => {
-            format!("array: {}", serde_json::to_string(&a).unwrap())
-        }
-        serde_json::Value::Object(o) => {
-            format!("object: {}", serde_json::to_string(&o).unwrap())
-        }
-        serde_json::Value::Null => format!("null"),
+        serde_json::Value::Bool(b) => b.to_string(),
+        serde_json::Value::Number(n) => n.to_string(),
+        serde_json::Value::String(s) => s,
+        serde_json::Value::Array(a) => serde_json::to_string(&a).unwrap(),
+        serde_json::Value::Object(o) => serde_json::to_string(&o).unwrap(),
+        serde_json::Value::Null => "null".to_string(),
     })
 }
 
