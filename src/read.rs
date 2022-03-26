@@ -1,7 +1,7 @@
-use crate::parse::{findattr, getcfgbase};
+use crate::parse::{findattr, getcfgbase, collectattrs};
 use rnix::{SyntaxKind, SyntaxNode};
 use serde_json::{self, Value};
-use std::process::Command;
+use std::{process::Command, collections::HashMap};
 
 pub enum ReadError {
     ParseError,
@@ -23,6 +23,8 @@ pub fn readvalue(f: &str, query: &str) -> Result<String, ReadError> {
         },
         None => return Err(ReadError::NoAttr),
     };
+    //let mut map = HashMap::new();
+    //collectattrs(&configbase, &mut map);
     Ok(outnode)
 }
 
@@ -48,9 +50,7 @@ pub fn readevalvalue(file: &str, query: &str) -> Result<Value, ReadError> {
         .arg("--strict")
         .output()
         .expect("nix-instantiate failed");
-    /*if !&output.status.success() {
-        return Err(ReadError::ParseError);
-    }*/
+
     let outstr = String::from_utf8_lossy(&output.stdout);
     let res: serde_json::Value = match serde_json::from_str(&outstr) {
         Ok(x) => x,

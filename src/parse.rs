@@ -1,4 +1,14 @@
+use std::collections::HashMap;
+
 use rnix::{self, SyntaxKind, SyntaxNode};
+
+enum AttrTypes {
+    String,
+    Int,
+    Bool,
+    List,
+    Map,
+}
 
 pub fn findattr(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
     for child in configbase.children() {
@@ -31,6 +41,34 @@ pub fn findattr(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
         }
     }
     return None;
+}
+
+pub fn collectattrs(configbase: &SyntaxNode, map: &mut HashMap<String, SyntaxNode>) /*-> HashMap<String, String>*/
+{
+    for child in configbase.children() {
+        if child.kind() == SyntaxKind::NODE_KEY_VALUE {
+            //println!("\n\nFound NODE_KEY_VALUE {}", child.to_string());
+            let children = child.children().collect::<Vec<SyntaxNode>>();
+            let nodekey = children.get(0).unwrap();
+            let value = children.get(1).unwrap();
+            if nodekey.kind() == SyntaxKind::NODE_KEY {
+                //println!("Valid attribute with node key {}", nodekey.to_string());
+                if value.kind() == SyntaxKind::NODE_ATTR_SET {
+                    //println!("Child is an attr set, we need to recurse before adding value");
+                    let mut childmap = HashMap::new();
+                    collectattrs(&value, &mut childmap);
+                    for (nk,v) in &childmap {
+                        //println!("VALUE: {:?}", v);
+                        map.insert(format!("{}.{}", nodekey.to_string(), nk),v.clone());
+                    }
+                } else {
+                    //println!("ADDING WITH KIND {:?}", value.kind());
+                    //println!("Adding key {} with value {} to set", nodekey, value);
+                    map.insert(nodekey.to_string(), value.clone());
+                }
+            }
+        }
+    }
 }
 
 pub fn getkey(node: &SyntaxNode) -> Vec<String> {

@@ -3,6 +3,7 @@ use rnix::{self, SyntaxKind, SyntaxNode};
 pub enum WriteError {
     ParseError,
     NoAttr,
+    ArrayError,
 }
 
 pub fn write(f: &str, query: &str, val: &str) -> Result<String, WriteError> {
@@ -99,12 +100,6 @@ fn modvalue(node: &SyntaxNode, val: &str) -> Option<SyntaxNode> {
         if child.kind() != SyntaxKind::NODE_KEY {
             let c = &child.clone();
             let input = val.to_string();
-            /* if child.kind() == SyntaxKind::NODE_STRING
-            /* && check if quotes are already passed */
-            {
-                input = format!("\"{}\"", input);
-            }
-            // Add a check for valid lists */
             let rep = &rnix::parse(&input)
                 .node()
                 .children()
@@ -123,6 +118,66 @@ fn modvalue(node: &SyntaxNode, val: &str) -> Option<SyntaxNode> {
             let out = node.replace_with(replaced);
             let rnode = rnix::parse(&out.to_string()).node();
             return Some(rnode);
+        }
+    }
+    return None;
+}
+
+pub fn addtoarr(f: &str, query: &str, items: Vec<String>) -> Result<String, WriteError> {
+    let ast = rnix::parse(&f);
+    let configbase = match getcfgbase(&ast.node()) {
+        Some(x) => x,
+        None => return Err(WriteError::ParseError),
+    };
+    let outnode = match findattr(&configbase, &query) {
+        Some(x) => match addtoarr_aux(&configbase, &x, items) {
+            Some(x) => x,
+            None => return Err(WriteError::ArrayError),
+        },
+        None => return Err(WriteError::NoAttr),
+    };
+    Ok(outnode.to_string())
+}
+
+fn addtoarr_aux(
+    configbase: &SyntaxNode,
+    node: &SyntaxNode,
+    items: Vec<String>,
+) -> Option<SyntaxNode> {
+    for child in node.children() {
+        if child.kind() == rnix::SyntaxKind::NODE_WITH {
+            return addtoarr_aux(node, &child, items.clone());
+
+        }
+        if child.kind() == SyntaxKind::NODE_LIST {
+            let mut green = child.green().to_owned();
+
+            for elem in items {
+                green = green.insert_child(
+                    green.children().len() - 2,
+                    rnix::NodeOrToken::Node(
+                        rnix::parse(&format!("\n{}{}", " ".repeat(4),elem))
+                            .node()
+                            .green()
+                            .to_owned(),
+                    ),
+                );
+            }
+
+            let index = match node.green().children().position(|x| match x.into_node() {
+                Some(x) => x.to_owned() == child.green().to_owned(),
+                None => false,
+            }) {
+                Some(x) => x,
+                None => return None,
+            };
+
+            let replace = node
+                .green()
+                .replace_child(index, rnix::NodeOrToken::Node(green));
+            let out = node.replace_with(replace);
+            let output = rnix::parse(&out.to_string()).node();
+            return Some(output);
         }
     }
     return None;
