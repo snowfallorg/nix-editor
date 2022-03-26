@@ -15,6 +15,7 @@ ARGS:
     <ATTRIBUTE>    Nix configuration option arribute
 
 OPTIONS:
+    -a, --arr <ARR>          Element to add
     -d, --deref              Dereference the value of the attribute
     -e, --eval               Show the evaluated value of the attribute
     -h, --help               Print help information
