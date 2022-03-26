@@ -111,6 +111,14 @@ fn readerr(e: nix_editor::read::ReadError, file: &str, attr: &str) {
             );
             printerror(&msg);
         }
+        nix_editor::read::ReadError::ArrayError => {
+            msg = format!(
+                "cannot read array '{}' : {}",
+                attr.purple(),
+                "Is this value an array?".purple()
+            );
+            printerror(&msg);
+        }
     }
 }
 

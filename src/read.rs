@@ -6,6 +6,7 @@ use std::{process::Command, collections::HashMap};
 pub enum ReadError {
     ParseError,
     NoAttr,
+    ArrayError,
 }
 
 pub fn readvalue(f: &str, query: &str) -> Result<String, ReadError> {
@@ -73,4 +74,41 @@ fn valfromjson<'a>(lst: Vec<&str>, j: &'a serde_json::Value) -> Option<serde_jso
         },
         _ => valfromjson(lst[1..].to_vec(), &j[lst[0]]),
     }
+}
+
+pub fn getarrvals(f: &str, query: &str) -> Result<Vec<String>, ReadError> {
+    let ast = rnix::parse(&f);
+    let configbase = match getcfgbase(&ast.node()) {
+        Some(x) => x,
+        None => {
+            return Err(ReadError::ParseError);
+        }
+    };
+    let output = match findattr(&configbase, &query) {
+        Some(x) => match getarrvals_aux(&x) {
+            Some(y) => y,
+            None => return Err(ReadError::ArrayError),
+        },
+        None => return Err(ReadError::NoAttr),
+    };
+    Ok(output)
+}
+
+fn getarrvals_aux(
+    node: &SyntaxNode,
+) -> Option<Vec<String>> {
+    for child in node.children() {
+        if child.kind() == rnix::SyntaxKind::NODE_WITH {
+            return getarrvals_aux(&child);
+
+        }
+        if child.kind() == SyntaxKind::NODE_LIST {
+            let mut out = vec![];
+            for elem in child.children() {
+                out.push(elem.to_string());
+            }
+            return Some(out);
+        }
+    }
+    return None;
 }
