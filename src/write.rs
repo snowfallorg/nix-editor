@@ -1,5 +1,7 @@
+use std::slice::SliceIndex;
+
 use crate::parse::{findattr, getcfgbase, getkey};
-use rnix::{self, SyntaxKind, SyntaxNode};
+use rnix::{self, types::TypedNode, SyntaxKind, SyntaxNode};
 pub enum WriteError {
     ParseError,
     NoAttr,
@@ -130,7 +132,7 @@ pub fn addtoarr(f: &str, query: &str, items: Vec<String>) -> Result<String, Writ
         None => return Err(WriteError::ParseError),
     };
     let outnode = match findattr(&configbase, &query) {
-        Some(x) => match addtoarr_aux(&configbase, &x, items) {
+        Some(x) => match addtoarr_aux(&x, items) {
             Some(x) => x,
             None => return Err(WriteError::ArrayError),
         },
@@ -140,14 +142,12 @@ pub fn addtoarr(f: &str, query: &str, items: Vec<String>) -> Result<String, Writ
 }
 
 fn addtoarr_aux(
-    configbase: &SyntaxNode,
     node: &SyntaxNode,
     items: Vec<String>,
 ) -> Option<SyntaxNode> {
     for child in node.children() {
         if child.kind() == rnix::SyntaxKind::NODE_WITH {
-            return addtoarr_aux(node, &child, items.clone());
-
+            return addtoarr_aux(&child, items.clone());
         }
         if child.kind() == SyntaxKind::NODE_LIST {
             let mut green = child.green().to_owned();
@@ -156,7 +156,7 @@ fn addtoarr_aux(
                 green = green.insert_child(
                     green.children().len() - 2,
                     rnix::NodeOrToken::Node(
-                        rnix::parse(&format!("\n{}{}", " ".repeat(4),elem))
+                        rnix::parse(&format!("\n{}{}", " ".repeat(4), elem))
                             .node()
                             .green()
                             .to_owned(),
@@ -176,6 +176,71 @@ fn addtoarr_aux(
                 .green()
                 .replace_child(index, rnix::NodeOrToken::Node(green));
             let out = node.replace_with(replace);
+            let output = rnix::parse(&out.to_string()).node();
+            return Some(output);
+        }
+    }
+    return None;
+}
+
+pub fn rmarr(f: &str, query: &str, items: Vec<String>) -> Result<String, WriteError> {
+    let ast = rnix::parse(&f);
+    let configbase = match getcfgbase(&ast.node()) {
+        Some(x) => x,
+        None => return Err(WriteError::ParseError),
+    };
+    let outnode = match findattr(&configbase, &query) {
+        Some(x) => match rmarr_aux(&x, items) {
+            Some(x) => x,
+            None => return Err(WriteError::ArrayError),
+        },
+        None => return Err(WriteError::NoAttr),
+    };
+    Ok(outnode.to_string())
+}
+
+fn rmarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
+    for child in node.children() {
+        if child.kind() == rnix::SyntaxKind::NODE_WITH {
+            return rmarr_aux(&child, items.clone());
+        }
+        if child.kind() == SyntaxKind::NODE_LIST {
+            let green = child.green().to_owned();
+            let mut idx = vec![];
+            for elem in green.children() {
+                if elem.as_node() != None && items.contains(&elem.to_string()) {
+                    let index = match green.children().position(|x| match x.into_node() {
+                        Some(x) => x.to_owned() == elem.as_node().unwrap().to_owned().to_owned(),
+                        None => false,
+                    }) {
+                        Some(x) => x,
+                        None => return None,
+                    };
+                    idx.push(index)
+                }
+            }
+            let mut acc = 0;
+            let mut replace = green.to_owned();
+
+            for i in idx {
+                replace = replace.remove_child(i-acc);
+                let mut v = vec![];
+                for c in replace.children() {
+                    v.push(c);
+                }
+                match v.get(i-acc-1).unwrap().as_token() {
+                    Some(x) => {
+                        if x.to_string().contains("\n") {
+                            replace = replace.remove_child(i-acc-1);
+                            acc += 1;
+                        }
+                    },
+                    None => {},
+                }
+                acc += 1;
+            }
+            let out = child.replace_with(replace);
+
             let output = rnix::parse(&out.to_string()).node();
             return Some(output);
         }
