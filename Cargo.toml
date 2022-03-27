@@ -17,4 +17,4 @@ include = [
 serde_json = "1.0.79"
 clap =  { version = "3.1.6", features = ["derive"] }
 rnix = "0.10.1"
-colored = "2.0.0"
+owo-colors = "3.3.0"

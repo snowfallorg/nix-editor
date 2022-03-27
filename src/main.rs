@@ -1,7 +1,7 @@
 use clap::{self, ArgGroup, Parser};
 use nix_editor::{write::deref, write::write, write::addtoarr};
 use std::{fs, path::Path, io::Write};
-use colored::*;
+use owo_colors::*;
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 #[clap(group(
