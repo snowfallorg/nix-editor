@@ -112,3 +112,43 @@ fn getarrvals_aux(
     }
     return None;
 }
+
+pub fn getwithvalue(f: &str, query: &str) -> Result<Vec<String>, ReadError> {
+    let ast = rnix::parse(&f);
+    let configbase = match getcfgbase(&ast.node()) {
+        Some(x) => x,
+        None => {
+            return Err(ReadError::ParseError);
+        }
+    };
+    let output = match findattr(&configbase, &query) {
+        Some(x) => match getwithval_aux(&x, vec![]) {
+            Some(y) => y,
+            None => return Err(ReadError::NoAttr),
+        },
+        None => return Err(ReadError::NoAttr),
+    };
+    Ok(output)
+}
+
+fn getwithval_aux(
+    node: &SyntaxNode,
+    withvals: Vec<String>,
+) -> Option<Vec<String>> {
+    for child in node.children() {
+        if child.kind() == rnix::SyntaxKind::NODE_WITH {
+            for c in child.children() {
+                if c.kind() == rnix::SyntaxKind::NODE_IDENT {
+                    let mut newvals = vec![];
+                    newvals.append(withvals.clone().as_mut());
+                    newvals.push(c.to_string());
+                    match getwithval_aux(&child, newvals.clone()) {
+                        Some(x) => return Some(x),
+                        None => return Some(newvals),
+                    }
+                }
+            }
+        }
+    }
+    return None;
+}
