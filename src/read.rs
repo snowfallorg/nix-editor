@@ -1,7 +1,7 @@
-use crate::parse::{findattr, getcfgbase, collectattrs};
+use crate::parse::{findattr, getcfgbase};
 use rnix::{SyntaxKind, SyntaxNode};
 use serde_json::{self, Value};
-use std::{process::Command, collections::HashMap};
+use std::{process::Command};
 
 pub enum ReadError {
     ParseError,

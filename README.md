@@ -1,6 +1,13 @@
 # Nix-Editor
 A command line utility for modifying NixOS configuration values.
 
+## NixOS Installation
+
+```
+git clone https://github.com/vlinkz/nix-editor
+nix-env -f nix-editor -i nix-editor
+```
+
 ## Usage with Nix Flakes
 ```
 nix run github:vlinkz/nix-editor -- --help

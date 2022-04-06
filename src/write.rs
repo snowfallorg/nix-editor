@@ -1,7 +1,5 @@
-use std::slice::SliceIndex;
-
 use crate::parse::{findattr, getcfgbase, getkey};
-use rnix::{self, types::TypedNode, SyntaxKind, SyntaxNode};
+use rnix::{self, SyntaxKind, SyntaxNode};
 pub enum WriteError {
     ParseError,
     NoAttr,
@@ -136,7 +134,11 @@ pub fn addtoarr(f: &str, query: &str, items: Vec<String>) -> Result<String, Writ
             Some(x) => x,
             None => return Err(WriteError::ArrayError),
         },
-        None => return Err(WriteError::NoAttr),
+        // If no arrtibute is found, create a new one
+        None => {
+            let newval = addvalue(&configbase, query, "[\n  ]");
+            return addtoarr(&newval.to_string(), query, items);
+        },
     };
     Ok(outnode.to_string())
 }
@@ -153,15 +155,25 @@ fn addtoarr_aux(
             let mut green = child.green().to_owned();
 
             for elem in items {
-                green = green.insert_child(
-                    green.children().len() - 2,
-                    rnix::NodeOrToken::Node(
-                        rnix::parse(&format!("\n{}{}", " ".repeat(4), elem))
-                            .node()
-                            .green()
-                            .to_owned(),
-                    ),
-                );
+                let mut i = 0;
+                for c in green.children() {
+                    if c.to_string() == "]" {
+                        if green.children().collect::<Vec<_>>()[i-1].as_token().unwrap().to_string().contains("\n") {
+                            i -= 1;
+                        }
+                        green = green.insert_child(
+                            i,
+                            rnix::NodeOrToken::Node(
+                                rnix::parse(&format!("\n{}{}", " ".repeat(4), elem))
+                                    .node()
+                                    .green()
+                                    .to_owned(),
+                            ),
+                        );
+                        break;
+                    }
+                    i += 1;
+                }
             }
 
             let index = match node.green().children().position(|x| match x.into_node() {
