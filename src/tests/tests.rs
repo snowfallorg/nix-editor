@@ -1,11 +1,9 @@
-use serde_json::de::Read;
-
 use crate::{
     read::{getarrvals, readvalue, ReadError, getwithvalue},
     write::{ addtoarr, deref, write, rmarr }, parse::{collectattrs, getcfgbase},
 };
 use core::panic;
-use std::{fs, io::Write, path::Path, collections::HashMap};
+use std::{fs, path::Path, collections::HashMap};
 
 #[test]
 fn read_val1() {
