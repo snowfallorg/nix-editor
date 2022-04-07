@@ -14,7 +14,7 @@ jobs:
 
       - name:                   Generate code coverage
         run: |
-          cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out Lcov
+          cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out Lcov --exclude-files src/main.rs src/tests/*
 
       - name: Coveralls
         uses: coverallsapp/github-action@master

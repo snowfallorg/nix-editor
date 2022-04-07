@@ -30,13 +30,11 @@ struct Args {
     output: Option<String>,
 }
 
-#[cfg(not(tarpaulin_include))]
 fn writetofile(file: &str, out: &str) {
     let mut outfile = std::fs::File::create(file).expect("create failed");
     outfile.write_all(out.as_bytes()).expect("write failed");
 }
 
-#[cfg(not(tarpaulin_include))]
 fn printread(f: &str, attr: &str) -> Result<String, nix_editor::read::ReadError> {
     match nix_editor::read::readvalue(f, attr) {
         Ok(x) => Ok(x),
@@ -44,7 +42,6 @@ fn printread(f: &str, attr: &str) -> Result<String, nix_editor::read::ReadError>
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 fn writeerr(e: nix_editor::write::WriteError, file: &str, attr: &str) {
     let msg;
     match e {
@@ -74,7 +71,6 @@ fn writeerr(e: nix_editor::write::WriteError, file: &str, attr: &str) {
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 fn readerr(e: nix_editor::read::ReadError, file: &str, attr: &str) {
     let msg;
     match e {
@@ -105,19 +101,16 @@ fn readerr(e: nix_editor::read::ReadError, file: &str, attr: &str) {
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 fn nofileerr(file: &str) {
     let msg = format!("reading '{}': {}", file.purple(), "No such file".purple());
     printerror(&msg);
 }
 
-#[cfg(not(tarpaulin_include))]
 fn printerror(msg: &str) {
     println!("{} {}", "error:".red(), msg);
 }
 
 
-#[cfg(not(tarpaulin_include))]
 fn main() {
     let args = Args::parse();
     let output;
