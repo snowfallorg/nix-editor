@@ -24,7 +24,6 @@ ARGS:
 OPTIONS:
     -a, --arr <ARR>          Element to add
     -d, --deref              Dereference the value of the attribute
-    -e, --eval               Show the evaluated value of the attribute
     -h, --help               Print help information
     -o, --output <OUTPUT>    Output file for modified config or read value
     -v, --val <VAL>          Value to write

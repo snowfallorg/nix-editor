@@ -2,12 +2,10 @@ use clap::{self, ArgGroup, Parser};
 use nix_editor::{write::deref, write::write, write::addtoarr};
 use std::{fs, path::Path, io::Write};
 use owo_colors::*;
+
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
-#[clap(group(
-    ArgGroup::new("write")
-        .args(&["val", "deref","eval", "arr"]),
-))]
+#[clap(group(ArgGroup::new("write").args(&["val", "deref", "arr"])))]
 struct Args {
     /// Configuration file to read
     file: String,
@@ -30,17 +28,15 @@ struct Args {
     /// Output file for modified config or read value
     #[clap(short, long)]
     output: Option<String>,
-
-    /// Show the evaluated value of the attribute
-    #[clap(short, long)]
-    eval: bool,
 }
 
+#[cfg(not(tarpaulin_include))]
 fn writetofile(file: &str, out: &str) {
     let mut outfile = std::fs::File::create(file).expect("create failed");
     outfile.write_all(out.as_bytes()).expect("write failed");
 }
 
+#[cfg(not(tarpaulin_include))]
 fn printread(f: &str, attr: &str) -> Result<String, nix_editor::read::ReadError> {
     match nix_editor::read::readvalue(f, attr) {
         Ok(x) => Ok(x),
@@ -48,21 +44,7 @@ fn printread(f: &str, attr: &str) -> Result<String, nix_editor::read::ReadError>
     }
 }
 
-fn printevalread(file: &str, attr: &str) -> Result<String, nix_editor::read::ReadError> {
-    let outval = match nix_editor::read::readevalvalue(file, attr) {
-        Ok(x) => x,
-        Err(e) => return Err(e),
-    };
-    Ok(match outval {
-        serde_json::Value::Bool(b) => b.to_string(),
-        serde_json::Value::Number(n) => n.to_string(),
-        serde_json::Value::String(s) => s,
-        serde_json::Value::Array(a) => serde_json::to_string(&a).unwrap(),
-        serde_json::Value::Object(o) => serde_json::to_string(&o).unwrap(),
-        serde_json::Value::Null => "null".to_string(),
-    })
-}
-
+#[cfg(not(tarpaulin_include))]
 fn writeerr(e: nix_editor::write::WriteError, file: &str, attr: &str) {
     let msg;
     match e {
@@ -92,6 +74,7 @@ fn writeerr(e: nix_editor::write::WriteError, file: &str, attr: &str) {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 fn readerr(e: nix_editor::read::ReadError, file: &str, attr: &str) {
     let msg;
     match e {
@@ -122,17 +105,19 @@ fn readerr(e: nix_editor::read::ReadError, file: &str, attr: &str) {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 fn nofileerr(file: &str) {
     let msg = format!("reading '{}': {}", file.purple(), "No such file".purple());
     printerror(&msg);
 }
 
+#[cfg(not(tarpaulin_include))]
 fn printerror(msg: &str) {
     println!("{} {}", "error:".red(), msg);
 }
 
 
-
+#[cfg(not(tarpaulin_include))]
 fn main() {
     let args = Args::parse();
     let output;
@@ -165,14 +150,6 @@ fn main() {
             Ok(x) => x,
             Err(e) => {
                 writeerr(e, &args.file, &args.attribute);
-                std::process::exit(1)
-            }
-        };
-    } else if args.eval {
-        output = match printevalread(&args.file, &args.attribute) {
-            Ok(x) => x,
-            Err(e) => {
-                readerr(e, &args.file, &args.attribute);
                 std::process::exit(1)
             }
         };
