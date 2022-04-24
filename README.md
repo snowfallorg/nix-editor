@@ -3,7 +3,7 @@ Nix-Editor
 [![crates.io][crates badge]][crate]
 [![Coverage Status][coveralls badge]][coveralls]
 [![Built with Nix][builtwithnix badge]][builtwithnix]
-[![License: GPL v3][gplv3 badge]][gplv3]
+[![License: MIT][MIT badge]][MIT]
 
 A command line utility for modifying NixOS configuration values.
 
@@ -41,5 +41,5 @@ OPTIONS:
 [crate]: https://crates.io/crates/nix-editor
 [builtwithnix badge]: https://img.shields.io/badge/Built%20With-Nix-41439A?style=flat-square&logo=nixos&logoColor=white
 [builtwithnix]: https://builtwithnix.org/
-[gplv3 badge]: https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square
-[gplv3]: https://www.gnu.org/licenses/gpl-3.0
+[MIT badge]: https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square
+[MIT]: https://opensource.org/licenses/MIT
