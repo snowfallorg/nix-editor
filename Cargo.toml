@@ -1,8 +1,8 @@
 [package]
 name = "nix-editor"
-version = "0.2.8"
+version = "0.2.9"
 edition = "2021"
-license = "GPL-3.0-or-later"
+license = "MIT"
 description = "Some functions to modify NixOS configuration files"
 repository = "https://github.com/vlinkz/nix-editor/"
 readme = "README.md"
@@ -14,6 +14,7 @@ include = [
 ]
 
 [dependencies]
-clap =  { version = "3.1.8", features = ["derive"] }
+clap =  { version = "3.1.18", features = ["derive"] }
 rnix = "0.10.1"
-owo-colors = "3.3.0"
+owo-colors = "3.4.0"
+failure = { version = "0.1.8", features = ["derive"] }

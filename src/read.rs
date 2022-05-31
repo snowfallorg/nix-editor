@@ -1,8 +1,14 @@
 use crate::parse::{findattr, getcfgbase};
+use failure::Fail;
 use rnix::{SyntaxKind, SyntaxNode};
+
+#[derive(Fail, Debug)]
 pub enum ReadError {
+    #[fail(display = "Read Error: Error while parsing.")]
     ParseError,
+    #[fail(display = "Read Error: No attributes.")]
     NoAttr,
+    #[fail(display = "Read Error: Error with array.")]
     ArrayError,
 }
 

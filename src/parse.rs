@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use rnix::{self, SyntaxKind, SyntaxNode};
 
+use crate::read::ReadError;
+
 enum AttrTypes {
     String,
     Int,
@@ -43,7 +45,20 @@ pub fn findattr(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
     return None;
 }
 
-pub fn collectattrs(configbase: &SyntaxNode, map: &mut HashMap<String, SyntaxNode>) /*-> HashMap<String, String>*/
+pub fn get_collection(f: String) -> Result<HashMap<String, String>, ReadError> {
+    let mut map = HashMap::new();
+    let ast = rnix::parse(&f);
+    let configbase = match getcfgbase(&ast.node()) {
+        Some(x) => x,
+        None => {
+            return Err(ReadError::ParseError);
+        }
+    };
+    collectattrs(&configbase, &mut map);
+    Ok(map)
+}
+
+pub fn collectattrs(configbase: &SyntaxNode, map: &mut HashMap<String, String>) /*-> HashMap<String, String>*/
 {
     for child in configbase.children() {
         if child.kind() == SyntaxKind::NODE_KEY_VALUE {
@@ -58,7 +73,7 @@ pub fn collectattrs(configbase: &SyntaxNode, map: &mut HashMap<String, SyntaxNod
                         map.insert(format!("{}.{}", nodekey.to_string(), nk),v.clone());
                     }
                 } else {
-                    map.insert(nodekey.to_string(), value.clone());
+                    map.insert(nodekey.to_string(), value.to_string());
                 }
             }
         }
@@ -72,7 +87,7 @@ pub fn getkey(node: &SyntaxNode) -> Vec<String> {
             key.push(child.text().to_string());
         }
     }
-    return key;
+    key
 }
 
 pub fn getcfgbase(node: &SyntaxNode) -> Option<SyntaxNode> {
@@ -94,5 +109,5 @@ pub fn getcfgbase(node: &SyntaxNode) -> Option<SyntaxNode> {
             None => {}
         }
     }
-    return None;
+    None
 }
