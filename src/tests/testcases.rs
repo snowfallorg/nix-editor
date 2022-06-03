@@ -285,13 +285,13 @@ fn read_collect() {
 
     // Check if read value is "pkgs"
     assert!(map.len() == 11);
-    println!("{:?}", map.get("imports").unwrap().to_string());
-    assert!(map.get("imports").unwrap().to_string() == "[ # Include the results of the hardware scan.\n      ./hardware-configuration.nix\n    ]");
-    assert!(map.get("boot.loader.systemd-boot.enable").unwrap().to_string() == "true");
-    assert!(map.get("boot.loader.efi.canTouchEfiVariables").unwrap().to_string() == "true");
-    assert!(map.get("programs.gnupg.agent.enable").unwrap().to_string() == "true");
-    assert!(map.get("programs.gnupg.agent.enableSSHSupport").unwrap().to_string() == "true");
-    assert!(map.get("system.stateVersion").unwrap().to_string() == "\"22.05\"");
+    println!("{:?}", map.get("imports").unwrap());
+    assert!(map.get("imports").unwrap() == "[ # Include the results of the hardware scan.\n      ./hardware-configuration.nix\n    ]");
+    assert!(map.get("boot.loader.systemd-boot.enable").unwrap() == "true");
+    assert!(map.get("boot.loader.efi.canTouchEfiVariables").unwrap() == "true");
+    assert!(map.get("programs.gnupg.agent.enable").unwrap() == "true");
+    assert!(map.get("programs.gnupg.agent.enableSSHSupport").unwrap() == "true");
+    assert!(map.get("system.stateVersion").unwrap() == "\"22.05\"");
 }
 
 #[test]
@@ -306,11 +306,11 @@ fn main_test() {
 
     // Check if read value is "pkgs"
     assert!(map.len() == 11);
-    println!("{:?}", map.get("imports").unwrap().to_string());
-    assert!(map.get("imports").unwrap().to_string() == "[ # Include the results of the hardware scan.\n      ./hardware-configuration.nix\n    ]");
-    assert!(map.get("boot.loader.systemd-boot.enable").unwrap().to_string() == "true");
-    assert!(map.get("boot.loader.efi.canTouchEfiVariables").unwrap().to_string() == "true");
-    assert!(map.get("programs.gnupg.agent.enable").unwrap().to_string() == "true");
-    assert!(map.get("programs.gnupg.agent.enableSSHSupport").unwrap().to_string() == "true");
-    assert!(map.get("system.stateVersion").unwrap().to_string() == "\"22.05\"");
+    println!("{:?}", map.get("imports").unwrap());
+    assert!(map.get("imports").unwrap() == "[ # Include the results of the hardware scan.\n      ./hardware-configuration.nix\n    ]");
+    assert!(map.get("boot.loader.systemd-boot.enable").unwrap() == "true");
+    assert!(map.get("boot.loader.efi.canTouchEfiVariables").unwrap() == "true");
+    assert!(map.get("programs.gnupg.agent.enable").unwrap() == "true");
+    assert!(map.get("programs.gnupg.agent.enableSSHSupport").unwrap() == "true");
+    assert!(map.get("system.stateVersion").unwrap() == "\"22.05\"");
 }

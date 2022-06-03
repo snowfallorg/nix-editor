@@ -13,14 +13,14 @@ pub enum ReadError {
 }
 
 pub fn readvalue(f: &str, query: &str) -> Result<String, ReadError> {
-    let ast = rnix::parse(&f);
+    let ast = rnix::parse(f);
     let configbase = match getcfgbase(&ast.node()) {
         Some(x) => x,
         None => {
             return Err(ReadError::ParseError);
         }
     };
-    let outnode = match findattr(&configbase, &query) {
+    let outnode = match findattr(&configbase, query) {
         Some(x) => match findvalue(&x) {
             Some(y) => y.to_string(),
             None => return Err(ReadError::NoAttr),
@@ -37,18 +37,18 @@ fn findvalue(node: &SyntaxNode) -> Option<SyntaxNode> {
             return Some(child);
         }
     }
-    return None;
+    None
 }
 
 pub fn getarrvals(f: &str, query: &str) -> Result<Vec<String>, ReadError> {
-    let ast = rnix::parse(&f);
+    let ast = rnix::parse(f);
     let configbase = match getcfgbase(&ast.node()) {
         Some(x) => x,
         None => {
             return Err(ReadError::ParseError);
         }
     };
-    let output = match findattr(&configbase, &query) {
+    let output = match findattr(&configbase, query) {
         Some(x) => match getarrvals_aux(&x) {
             Some(y) => y,
             None => return Err(ReadError::ArrayError),
@@ -74,18 +74,18 @@ fn getarrvals_aux(
             return Some(out);
         }
     }
-    return None;
+    None
 }
 
 pub fn getwithvalue(f: &str, query: &str) -> Result<Vec<String>, ReadError> {
-    let ast = rnix::parse(&f);
+    let ast = rnix::parse(f);
     let configbase = match getcfgbase(&ast.node()) {
         Some(x) => x,
         None => {
             return Err(ReadError::ParseError);
         }
     };
-    let output = match findattr(&configbase, &query) {
+    let output = match findattr(&configbase, query) {
         Some(x) => match getwithval_aux(&x, vec![]) {
             Some(y) => y,
             None => return Err(ReadError::NoAttr),
@@ -97,14 +97,14 @@ pub fn getwithvalue(f: &str, query: &str) -> Result<Vec<String>, ReadError> {
 
 fn getwithval_aux(
     node: &SyntaxNode,
-    withvals: Vec<String>,
+    mut withvals: Vec<String>,
 ) -> Option<Vec<String>> {
     for child in node.children() {
         if child.kind() == rnix::SyntaxKind::NODE_WITH {
             for c in child.children() {
                 if c.kind() == rnix::SyntaxKind::NODE_IDENT {
                     let mut newvals = vec![];
-                    newvals.append(withvals.clone().as_mut());
+                    newvals.append(withvals.as_mut());
                     newvals.push(c.to_string());
                     match getwithval_aux(&child, newvals.clone()) {
                         Some(x) => return Some(x),
@@ -114,5 +114,5 @@ fn getwithval_aux(
             }
         }
     }
-    return None;
+    None
 }

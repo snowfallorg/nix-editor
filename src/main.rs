@@ -38,7 +38,7 @@ fn writetofile(file: &str, out: &str) {
 fn printread(f: &str, attr: &str) -> Result<String, nix_editor::read::ReadError> {
     match nix_editor::read::readvalue(f, attr) {
         Ok(x) => Ok(x),
-        Err(e) => return Err(e),
+        Err(e) => Err(e),
     }
 }
 
@@ -121,7 +121,7 @@ fn main() {
     let f = fs::read_to_string(&args.file).expect("Failed to read file");
 
     if args.arr.is_some() {
-        output = match addtoarr(&f, &args.attribute, vec![args.arr.unwrap().to_string()]) {
+        output = match addtoarr(&f, &args.attribute, vec![args.arr.unwrap()]) {
             Ok(x) => x,
             Err(e) => {
                 writeerr(e, &args.file, &args.attribute);

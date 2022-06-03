@@ -13,22 +13,22 @@ pub enum WriteError {
 }
 
 pub fn write(f: &str, query: &str, val: &str) -> Result<String, WriteError> {
-    let ast = rnix::parse(&f);
+    let ast = rnix::parse(f);
     let configbase = match getcfgbase(&ast.node()) {
         Some(x) => x,
         None => {
             return Err(WriteError::ParseError);
         }
     };
-    let outnode = match findattr(&configbase, &query) {
-        Some(x) => modvalue(&x, &val).unwrap(),
+    let outnode = match findattr(&configbase, query) {
+        Some(x) => modvalue(&x, val).unwrap(),
         None => {
-            let mut y = query.split(".").collect::<Vec<_>>();
+            let mut y = query.split('.').collect::<Vec<_>>();
             y.pop();
             let x = findattrset(&configbase, &y.join("."), 0);
             match x {
-                Some((base, v, spaces)) => addvalue(&base, &format!("{}{}", " ".repeat(spaces), &query[v.len()+1..]), &val),
-                None => addvalue(&configbase, &query, &val),
+                Some((base, v, spaces)) => addvalue(&base, &format!("{}{}", " ".repeat(spaces), &query[v.len()+1..]), val),
+                None => addvalue(&configbase, query, val),
             }
         }
     };
@@ -38,13 +38,13 @@ pub fn write(f: &str, query: &str, val: &str) -> Result<String, WriteError> {
 fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
     let mut index = configbase.green().children().len() - 2;
     // To find a better index for insertion, first find a matching node, then find the next newline token, after that, insert
-    match matchval(&configbase, &query, query.split(".").count()) {
+    match matchval(configbase, query, query.split('.').count()) {
         Some(x) => {
             let i = configbase
                 .green()
                 .children()
                 .position(|y| match y.into_node() {
-                    Some(y) => y.to_owned() == x.green().to_owned(),
+                    Some(y) => *y == x.green().to_owned(),
                     None => false,
                 })
                 .unwrap();
@@ -52,7 +52,7 @@ fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
             for child in configafter {
                 match child.as_token() {
                     Some(x) => {
-                        if x.text().contains("\n") {
+                        if x.text().contains('\n') {
                             let cas = configafter.to_vec();
                             index = i + cas
                                 .iter()
@@ -77,7 +77,7 @@ fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
     let new = configbase
         .green()
         .insert_child(index, rnix::NodeOrToken::Node(input));
-    let replace = configbase.replace_with(new.clone());
+    let replace = configbase.replace_with(new);
     rnix::parse(&replace.to_string()).node()
 }
 
@@ -117,12 +117,12 @@ fn findattrset(configbase: &SyntaxNode, name: &str, spaces: usize) -> Option<(Sy
             }
         }
     }
-    return None;
+    None
 }
 
 fn matchval(configbase: &SyntaxNode, query: &str, acc: usize) -> Option<SyntaxNode> {
     let qvec = &query
-        .split(".")
+        .split('.')
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
     let q = &qvec[..acc];
@@ -131,17 +131,15 @@ fn matchval(configbase: &SyntaxNode, query: &str, acc: usize) -> Option<SyntaxNo
             for subchild in child.children() {
                 if subchild.kind() == SyntaxKind::NODE_KEY {
                     let key = getkey(&subchild);
-                    if key.len() >= q.len() {
-                        if &key[..q.len()] == q {
-                            return Some(child.clone());
-                        }
+                    if key.len() >= q.len() && &key[..q.len()] == q {
+                        return Some(child);
                     }
                 }
             }
         }
     }
     if acc == 1 {
-        return None;
+        None
     } else {
         matchval(configbase, query, acc - 1)
     }
@@ -151,7 +149,7 @@ fn modvalue(node: &SyntaxNode, val: &str) -> Option<SyntaxNode> {
     // First find the IDENT node
     for child in node.children() {
         if child.kind() != SyntaxKind::NODE_KEY {
-            let c = &child.clone();
+            let c = &child;
             let input = val.to_string();
             let rep = &rnix::parse(&input)
                 .node()
@@ -161,7 +159,7 @@ fn modvalue(node: &SyntaxNode, val: &str) -> Option<SyntaxNode> {
                 .green()
                 .children()
                 .position(|y| match y.into_node() {
-                    Some(y) => y.to_owned() == c.green().to_owned(),
+                    Some(y) => *y == c.green().to_owned(),
                     None => false,
                 })
                 .unwrap();
@@ -173,16 +171,16 @@ fn modvalue(node: &SyntaxNode, val: &str) -> Option<SyntaxNode> {
             return Some(rnode);
         }
     }
-    return None;
+    None
 }
 
 pub fn addtoarr(f: &str, query: &str, items: Vec<String>) -> Result<String, WriteError> {
-    let ast = rnix::parse(&f);
+    let ast = rnix::parse(f);
     let configbase = match getcfgbase(&ast.node()) {
         Some(x) => x,
         None => return Err(WriteError::ParseError),
     };
-    let outnode = match findattr(&configbase, &query) {
+    let outnode = match findattr(&configbase, query) {
         Some(x) => match addtoarr_aux(&x, items) {
             Some(x) => x,
             None => return Err(WriteError::ArrayError),
@@ -199,7 +197,7 @@ pub fn addtoarr(f: &str, query: &str, items: Vec<String>) -> Result<String, Writ
 fn addtoarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
     for child in node.children() {
         if child.kind() == rnix::SyntaxKind::NODE_WITH {
-            return addtoarr_aux(&child, items.clone());
+            return addtoarr_aux(&child, items);
         }
         if child.kind() == SyntaxKind::NODE_LIST {
             let mut green = child.green().to_owned();
@@ -212,7 +210,7 @@ fn addtoarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
                             .as_token()
                             .unwrap()
                             .to_string()
-                            .contains("\n")
+                            .contains('\n')
                         {
                             i -= 1;
                         }
@@ -232,7 +230,7 @@ fn addtoarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
             }
 
             let index = match node.green().children().position(|x| match x.into_node() {
-                Some(x) => x.to_owned() == child.green().to_owned(),
+                Some(x) => *x == child.green().to_owned(),
                 None => false,
             }) {
                 Some(x) => x,
@@ -247,16 +245,16 @@ fn addtoarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
             return Some(output);
         }
     }
-    return None;
+    None
 }
 
 pub fn rmarr(f: &str, query: &str, items: Vec<String>) -> Result<String, WriteError> {
-    let ast = rnix::parse(&f);
+    let ast = rnix::parse(f);
     let configbase = match getcfgbase(&ast.node()) {
         Some(x) => x,
         None => return Err(WriteError::ParseError),
     };
-    let outnode = match findattr(&configbase, &query) {
+    let outnode = match findattr(&configbase, query) {
         Some(x) => match rmarr_aux(&x, items) {
             Some(x) => x,
             None => return Err(WriteError::ArrayError),
@@ -269,7 +267,7 @@ pub fn rmarr(f: &str, query: &str, items: Vec<String>) -> Result<String, WriteEr
 fn rmarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
     for child in node.children() {
         if child.kind() == rnix::SyntaxKind::NODE_WITH {
-            return rmarr_aux(&child, items.clone());
+            return rmarr_aux(&child, items);
         }
         if child.kind() == SyntaxKind::NODE_LIST {
             let green = child.green().to_owned();
@@ -277,7 +275,11 @@ fn rmarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
             for elem in green.children() {
                 if elem.as_node() != None && items.contains(&elem.to_string()) {
                     let index = match green.children().position(|x| match x.into_node() {
-                        Some(x) => x.to_owned() == elem.as_node().unwrap().to_owned().to_owned(),
+                        Some(x) => if let Some(y) = elem.as_node() {
+                            *x == y.to_owned().to_owned()
+                        } else {
+                            false
+                        }
                         None => false,
                     }) {
                         Some(x) => x,
@@ -287,7 +289,7 @@ fn rmarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
                 }
             }
             let mut acc = 0;
-            let mut replace = green.to_owned();
+            let mut replace = green;
 
             for i in idx {
                 replace = replace.remove_child(i - acc);
@@ -297,7 +299,7 @@ fn rmarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
                 }
                 match v.get(i - acc - 1).unwrap().as_token() {
                     Some(x) => {
-                        if x.to_string().contains("\n") {
+                        if x.to_string().contains('\n') {
                             replace = replace.remove_child(i - acc - 1);
                             acc += 1;
                         }
@@ -312,16 +314,16 @@ fn rmarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
             return Some(output);
         }
     }
-    return None;
+    None
 }
 
 pub fn deref(f: &str, query: &str) -> Result<String, WriteError> {
-    let ast = rnix::parse(&f);
+    let ast = rnix::parse(f);
     let configbase = match getcfgbase(&ast.node()) {
         Some(x) => x,
         None => return Err(WriteError::ParseError),
     };
-    let outnode = match deref_aux(&configbase, &query) {
+    let outnode = match deref_aux(&configbase, query) {
         Some(x) => x,
         None => return Err(WriteError::NoAttr),
     };
@@ -337,7 +339,7 @@ fn deref_aux(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
                     // We have a key, now we need to check if it's the one we're looking for
                     let key = getkey(&subchild);
                     let qkey = name
-                        .split(".")
+                        .split('.')
                         .map(|s| s.to_string())
                         .collect::<Vec<String>>();
                     if qkey == key {
@@ -346,7 +348,7 @@ fn deref_aux(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
                                 .green()
                                 .children()
                                 .position(|x| match x.into_node() {
-                                    Some(x) => x.to_owned() == child.green().to_owned(),
+                                    Some(x) => *x == child.green().to_owned(),
                                     None => false,
                                 }) {
                                 Some(x) => x,
@@ -357,7 +359,7 @@ fn deref_aux(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
                         // Remove leading newline if it still exists
                         if del.children().collect::<Vec<_>>()[index]
                             .to_string()
-                            .contains("\n")
+                            .contains('\n')
                         {
                             del = del.remove_child(index);
                         }
@@ -369,7 +371,7 @@ fn deref_aux(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
                             // We have a subkey, so we need to recurse
                             let subkey = &qkey[key.len()..].join(".").to_string();
                             let newbase = getcfgbase(&child).unwrap();
-                            let subattr = deref_aux(&newbase, &subkey);
+                            let subattr = deref_aux(&newbase, subkey);
                             if subattr.is_some() {
                                 return subattr;
                             }
@@ -379,5 +381,5 @@ fn deref_aux(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
             }
         }
     }
-    return None;
+    None
 }
