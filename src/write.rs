@@ -22,7 +22,15 @@ pub fn write(f: &str, query: &str, val: &str) -> Result<String, WriteError> {
     };
     let outnode = match findattr(&configbase, &query) {
         Some(x) => modvalue(&x, &val).unwrap(),
-        None => addvalue(&configbase, &query, &val),
+        None => {
+            let mut y = query.split(".").collect::<Vec<_>>();
+            y.pop();
+            let x = findattrset(&configbase, &y.join("."), 0);
+            match x {
+                Some((base, v, spaces)) => addvalue(&base, &format!("{}{}", " ".repeat(spaces), &query[v.len()+1..]), &val),
+                None => addvalue(&configbase, &query, &val),
+            }
+        }
     };
     Ok(outnode.to_string())
 }
@@ -71,6 +79,45 @@ fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
         .insert_child(index, rnix::NodeOrToken::Node(input));
     let replace = configbase.replace_with(new.clone());
     rnix::parse(&replace.to_string()).node()
+}
+
+fn findattrset(configbase: &SyntaxNode, name: &str, spaces: usize) -> Option<(SyntaxNode, String, usize)> {
+    for child in configbase.children() {
+        if child.kind() == SyntaxKind::NODE_KEY_VALUE {
+            // Now we have to read all the indent values from the key
+            for subchild in child.children() {
+                if subchild.kind() == SyntaxKind::NODE_KEY {
+                    // We have a key, now we need to check if it's the one we're looking for
+                    let key = getkey(&subchild);
+                    let qkey = name
+                        .split('.')
+                        .map(|s| s.to_string())
+                        .collect::<Vec<String>>();
+                    if qkey == key {
+                        // We have key, now lets find the attrset
+                        for possibleset in child.children() {
+                            if possibleset.kind() == SyntaxKind::NODE_ATTR_SET {
+                                return Some((possibleset, name.to_string(), spaces+2));
+                            }
+                        }
+                        return None;
+                    } else if qkey.len() > key.len() {
+                        // We have a subkey, so we need to recurse
+                        if key == qkey[0..key.len()] {
+                            // We have a subkey, so we need to recurse
+                            let subkey = &qkey[key.len()..].join(".").to_string();
+                            let newbase = getcfgbase(&child).unwrap();
+                            let subattr = findattrset(&newbase, subkey, spaces+2);
+                            if subattr.is_some() {
+                                return subattr;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return None;
 }
 
 fn matchval(configbase: &SyntaxNode, query: &str, acc: usize) -> Option<SyntaxNode> {
@@ -294,22 +341,28 @@ fn deref_aux(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
                         .map(|s| s.to_string())
                         .collect::<Vec<String>>();
                     if qkey == key {
-                        let index = match configbase.green().children().position(|x| match x.into_node() {
-                            Some(x) => x.to_owned() == child.green().to_owned(),
-                            None => false,
-                        }) {
-                            Some(x) => x,
-                            None => return None,
-                        };
+                        let index =
+                            match configbase
+                                .green()
+                                .children()
+                                .position(|x| match x.into_node() {
+                                    Some(x) => x.to_owned() == child.green().to_owned(),
+                                    None => false,
+                                }) {
+                                Some(x) => x,
+                                None => return None,
+                            };
                         let mut del = configbase.green().remove_child(index);
 
                         // Remove leading newline if it still exists
-                        if del.children().collect::<Vec<_>>()[index].to_string().contains("\n") {
+                        if del.children().collect::<Vec<_>>()[index]
+                            .to_string()
+                            .contains("\n")
+                        {
                             del = del.remove_child(index);
                         }
                         let out = configbase.replace_with(del);
                         return Some(rnix::parse(&out.to_string()).node());
-
                     } else if qkey.len() > key.len() {
                         // We have a subkey, so we need to recurse
                         if key == qkey[0..key.len()] {
