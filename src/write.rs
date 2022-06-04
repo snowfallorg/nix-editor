@@ -81,6 +81,7 @@ fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
     rnix::parse(&replace.to_string()).node()
 }
 
+// Currently indentation is badly done by inserting spaces, it should check the spaces of the previous attr instead
 fn findattrset(configbase: &SyntaxNode, name: &str, spaces: usize) -> Option<(SyntaxNode, String, usize)> {
     for child in configbase.children() {
         if child.kind() == SyntaxKind::NODE_KEY_VALUE {
@@ -108,8 +109,11 @@ fn findattrset(configbase: &SyntaxNode, name: &str, spaces: usize) -> Option<(Sy
                             let subkey = &qkey[key.len()..].join(".").to_string();
                             let newbase = getcfgbase(&child).unwrap();
                             let subattr = findattrset(&newbase, subkey, spaces+2);
-                            if subattr.is_some() {
-                                return subattr;
+                            match subattr {
+                                Some((node, _, spaces)) => {
+                                    return Some((node, name.to_string(), spaces));
+                                }
+                                None => {}
                             }
                         }
                     }

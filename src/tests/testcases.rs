@@ -1,6 +1,6 @@
 use crate::{
     read::{getarrvals, readvalue, ReadError, getwithvalue},
-    write::{ addtoarr, deref, write, rmarr }, parse::{collectattrs, getcfgbase},
+    write::{ addtoarr, deref, write, rmarr }, parse::{collectattrs, getcfgbase, get_collection},
 };
 use core::panic;
 use std::{fs, path::Path, collections::HashMap};
@@ -142,8 +142,96 @@ fn write_val3() {
         Err(_) => panic!("Failed to read value"),
     };
 
-    // Check if read value is "test"
+    // Check if read value is true
     assert!(r == "true")
+}
+
+#[test]
+fn write_val4() {
+    let config =
+        fs::read_to_string(Path::new("src/tests/configuration.nix")).expect("Failed to read file");
+
+    // Write value to file that does not yet exist
+    let out = match write(&config, "boot.loader.systemd-boot.editor", "false") {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to write to file"),
+    };
+
+    // Check if read value is correct
+    let r = match readvalue(&out, "boot.loader.systemd-boot.editor") {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to read value"),
+    };
+
+    // Check if read value is false
+    assert!(r == "false")
+}
+
+#[test]
+fn write_format1() {
+    let config =
+        fs::read_to_string(Path::new("src/tests/format.nix")).expect("Failed to read file");
+
+    // Write value to file that does not yet exist
+    let out = match write(&config, "a.c", "false") {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to write to file"),
+    };
+
+    // Check if read value is correct
+    let r = match readvalue(&out, "a.c") {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to read value"),
+    };
+
+    // Check if read value is false
+    assert!(r == "false");
+    // Check format
+    let expectedout = r#"{
+  a = {
+    b = true;
+    d = {
+      e = false;
+      f = "hello";
+    };
+    c = false;
+  };
+}"#;
+    assert!(out.eq(expectedout))
+}
+
+#[test]
+fn write_format2() {
+    let config =
+        fs::read_to_string(Path::new("src/tests/format.nix")).expect("Failed to read file");
+
+    // Write value to file that does not yet exist
+    let out = match write(&config, "a.d.g", "\"test\"") {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to write to file"),
+    };
+
+    println!("{out}");
+    // Check if read value is correct
+    let r = match readvalue(&out, "a.d.g") {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to read value"),
+    };
+
+    // Check if read value is "test"
+    assert!(r == "\"test\"");
+    // Check format
+    let expectedout = r#"{
+  a = {
+    b = true;
+    d = {
+      e = false;
+      f = "hello";
+      g = "test";
+    };
+  };
+}"#;
+    assert!(out.eq(expectedout))
 }
 
 #[test]
@@ -313,4 +401,36 @@ fn main_test() {
     assert!(map.get("programs.gnupg.agent.enable").unwrap() == "true");
     assert!(map.get("programs.gnupg.agent.enableSSHSupport").unwrap() == "true");
     assert!(map.get("system.stateVersion").unwrap() == "\"22.05\"");
+}
+
+#[test]
+fn collect1() {
+    let config =
+        fs::read_to_string(Path::new("src/tests/format.nix")).expect("Failed to read file");
+
+    // Write value to file that does not yet exist
+    let out = match get_collection(config) {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to write to file"),
+    };
+
+    // Check if read values are correct
+    assert!(out.get("a.b") == Some(&String::from("true")));
+}
+
+#[test]
+fn collect2() {
+    let config =
+        fs::read_to_string(Path::new("src/tests/configuration.nix")).expect("Failed to read file");
+
+    // Write value to file that does not yet exist
+    let out = match get_collection(config) {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to write to file"),
+    };
+
+    // Check if read values are correct
+    assert!(out.get("boot.loader.efi.canTouchEfiVariables") == Some(&String::from("true")));
+    assert!(out.get("programs.gnupg.agent.enableSSHSupport") == Some(&String::from("true")));
+    assert!(out.get("system.stateVersion") == Some(&String::from("\"22.05\"")));
 }

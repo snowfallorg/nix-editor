@@ -1,3 +1,6 @@
 /target
 /result
 *.html
+*.txt
+.vscode
+shell.nix
