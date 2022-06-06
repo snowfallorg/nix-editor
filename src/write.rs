@@ -74,6 +74,7 @@ fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
         .node()
         .green()
         .to_owned();
+    if index == 0 { index += 1; };
     let new = configbase
         .green()
         .insert_child(index, rnix::NodeOrToken::Node(input));
