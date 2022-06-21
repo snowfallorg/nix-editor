@@ -5,6 +5,7 @@ use rnix::{self, SyntaxKind, SyntaxNode};
 use crate::read::ReadError;
 
 pub fn findattr(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
+    let mut childvec: Vec<(String, String)> = Vec::new();
     for child in configbase.children() {
         if child.kind() == SyntaxKind::NODE_KEY_VALUE {
             // Now we have to read all the indent values from the key
@@ -29,12 +30,33 @@ pub fn findattr(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
                                 return subattr;
                             }
                         }
+                    } else if qkey.len() < key.len() && qkey == key[0..qkey.len()] {
+                        match child.last_child() {
+                            Some(x) => { childvec.push((key[qkey.len()..].join("."), x.to_string())); },
+                            None => {},
+                        }
                     }
                 }
             }
         }
     }
-    None
+    if childvec.is_empty() {
+        None
+    } else {
+        let s;
+        if childvec.len() == 1 {
+            s = format!("{{ {} = {}; }}", childvec[0].0, childvec[0].1);
+        } else {
+            let mut list = String::new();
+            for (k, v) in childvec.iter() {
+                list.push_str(&format!("  {} = {};\n", k, v));
+            }
+            list = list.strip_suffix('\n').unwrap_or(&list).to_string();
+            s = format!("{{\n{}\n}}", list);
+        }
+        let ast = rnix::parse(&s);
+        Some(ast.node())
+    }
 }
 
 pub fn get_collection(f: String) -> Result<HashMap<String, String>, ReadError> {

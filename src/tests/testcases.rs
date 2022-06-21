@@ -54,6 +54,36 @@ fn read_val3() {
 }
 
 #[test]
+fn read_val4() {
+    let config =
+        fs::read_to_string(Path::new("src/tests/configuration.nix")).expect("Failed to read file");
+
+    // Write value to file that does not yet exist
+    let out = match readvalue(&config, "boot.loader") {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to read value"),
+    };
+
+    // Check if read value is correct
+    assert!(out == "{\n  systemd-boot.enable = true;\n  efi.canTouchEfiVariables = true;\n}")
+}
+
+#[test]
+fn read_val5() {
+    let config =
+        fs::read_to_string(Path::new("src/tests/configuration.nix")).expect("Failed to read file");
+
+    // Write value to file that does not yet exist
+    let out = match readvalue(&config, "system") {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to read value"),
+    };
+
+    // Check if read value is correct
+    assert!(out == "{ stateVersion = \"22.05\"; }")
+}
+
+#[test]
 fn readarr_val1() {
     let config =
         fs::read_to_string(Path::new("src/tests/configuration.nix")).expect("Failed to read file");
