@@ -18,7 +18,30 @@ pub fn findattr(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
                         .map(|s| s.to_string())
                         .collect::<Vec<String>>();
                     if qkey == key {
-                        return Some(child);
+                        if child
+                            .children()
+                            .any(|x| x.kind() == SyntaxKind::NODE_ATTR_SET)
+                        {
+                            if let Some(x) = child.children().last() {
+                                if x.kind() == SyntaxKind::NODE_ATTR_SET {
+                                    for n in x.children() {
+                                        let i = n.children().count();
+                                        if let (Some(k), Some(v)) =
+                                            (n.children().nth(i - 2), n.last_child())
+                                        {
+                                            let f = n.to_string().find(&k.to_string()).unwrap()
+                                                + k.to_string().len();
+                                            childvec.push((
+                                                n.to_string()[0..f].to_string(),
+                                                v.to_string(),
+                                            ));
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            return Some(child);
+                        }
                     } else if qkey.len() > key.len() {
                         // We have a subkey, so we need to recurse
                         if key == qkey[0..key.len()] {
@@ -32,8 +55,10 @@ pub fn findattr(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
                         }
                     } else if qkey.len() < key.len() && qkey == key[0..qkey.len()] {
                         match child.last_child() {
-                            Some(x) => { childvec.push((key[qkey.len()..].join("."), x.to_string())); },
-                            None => {},
+                            Some(x) => {
+                                childvec.push((key[qkey.len()..].join("."), x.to_string()));
+                            }
+                            None => {}
                         }
                     }
                 }
@@ -72,7 +97,8 @@ pub fn get_collection(f: String) -> Result<HashMap<String, String>, ReadError> {
     Ok(map)
 }
 
-pub fn collectattrs(configbase: &SyntaxNode, map: &mut HashMap<String, String>) /*-> HashMap<String, String>*/
+pub fn collectattrs(configbase: &SyntaxNode, map: &mut HashMap<String, String>)
+/*-> HashMap<String, String>*/
 {
     for child in configbase.children() {
         if child.kind() == SyntaxKind::NODE_KEY_VALUE {
@@ -83,8 +109,8 @@ pub fn collectattrs(configbase: &SyntaxNode, map: &mut HashMap<String, String>) 
                 if value.kind() == SyntaxKind::NODE_ATTR_SET {
                     let mut childmap = HashMap::new();
                     collectattrs(value, &mut childmap);
-                    for (nk,v) in &childmap {
-                        map.insert(format!("{}.{}", nodekey, nk),v.clone());
+                    for (nk, v) in &childmap {
+                        map.insert(format!("{}.{}", nodekey, nk), v.clone());
                     }
                 } else {
                     map.insert(nodekey.to_string(), value.to_string());

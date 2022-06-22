@@ -84,6 +84,21 @@ fn read_val5() {
 }
 
 #[test]
+fn read_val6() {
+    let config =
+        fs::read_to_string(Path::new("src/tests/format2.nix")).expect("Failed to read file");
+
+    // Write value to file that does not yet exist
+    let out = match readvalue(&config, "a") {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to read value"),
+    };
+
+    // Check if read value is correct
+    assert!(out == "{\n  b = true;\n  c = {\n    d = \"test\";\n  };\n}")
+}
+
+#[test]
 fn readarr_val1() {
     let config =
         fs::read_to_string(Path::new("src/tests/configuration.nix")).expect("Failed to read file");
