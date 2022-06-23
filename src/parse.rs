@@ -47,10 +47,10 @@ pub fn findattr(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
                         if key == qkey[0..key.len()] {
                             // We have a subkey, so we need to recurse
                             let subkey = &qkey[key.len()..].join(".").to_string();
-                            let newbase = getcfgbase(&child).unwrap();
-                            let subattr = findattr(&newbase, subkey);
-                            if subattr.is_some() {
-                                return subattr;
+                            if let Some(newbase) = getcfgbase(&child) {
+                                if let Some(subattr) = findattr(&newbase, subkey) {
+                                    return Some(subattr);
+                                }
                             }
                         }
                     } else if qkey.len() < key.len() && qkey == key[0..qkey.len()] {
@@ -70,17 +70,26 @@ pub fn findattr(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
     } else {
         let s;
         if childvec.len() == 1 {
-            s = format!("{{ {} = {}; }}", childvec[0].0, childvec[0].1);
+            s = format!("{{{} = {{ {} = {}; }}; }}", name, childvec[0].0, childvec[0].1);
         } else {
             let mut list = String::new();
             for (k, v) in childvec.iter() {
                 list.push_str(&format!("  {} = {};\n", k, v));
             }
             list = list.strip_suffix('\n').unwrap_or(&list).to_string();
-            s = format!("{{\n{}\n}}", list);
+            s = format!("{{ {} = {{\n{}\n}}; }}", name, list);
         }
         let ast = rnix::parse(&s);
-        Some(ast.node())
+        if let Some(x) = ast.node().children().next() {
+            if x.kind() == SyntaxKind::NODE_ATTR_SET {
+                if let Some(y) = x.children().next() {
+                    if y.kind() == SyntaxKind::NODE_KEY_VALUE {
+                        return Some(y);
+                    }
+                }
+            }
+        }
+        None
     }
 }
 

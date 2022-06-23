@@ -1,4 +1,9 @@
-use crate::parse::{findattr, getcfgbase, getkey};
+use std::{collections::HashMap, hash::Hash, thread::panicking};
+
+use crate::{
+    parse::{findattr, getcfgbase, getkey},
+    read::findvalue,
+};
 use failure::Fail;
 use rnix::{self, SyntaxKind, SyntaxNode};
 
@@ -10,6 +15,8 @@ pub enum WriteError {
     NoAttr,
     #[fail(display = "Write Error: Error with array.")]
     ArrayError,
+    #[fail(display = "Write Error: Writing value to attribute set.")]
+    WriteValueToSet,
 }
 
 pub fn write(f: &str, query: &str, val: &str) -> Result<String, WriteError> {
@@ -20,14 +27,30 @@ pub fn write(f: &str, query: &str, val: &str) -> Result<String, WriteError> {
             return Err(WriteError::ParseError);
         }
     };
+    if let Some(x) = getcfgbase(&rnix::parse(val).node()) {
+        if x.kind() == SyntaxKind::NODE_ATTR_SET {
+            return addattrval(f, &configbase, query, &x);
+        }
+    }
     let outnode = match findattr(&configbase, query) {
-        Some(x) => modvalue(&x, val).unwrap(),
+        Some(x) => {
+            if let Some(n) = x.children().last() {
+                if n.kind() == SyntaxKind::NODE_ATTR_SET {
+                    return Err(WriteError::WriteValueToSet);
+                }
+            }
+            modvalue(&x, val).unwrap()
+        }
         None => {
             let mut y = query.split('.').collect::<Vec<_>>();
             y.pop();
             let x = findattrset(&configbase, &y.join("."), 0);
             match x {
-                Some((base, v, spaces)) => addvalue(&base, &format!("{}{}", " ".repeat(spaces), &query[v.len()+1..]), val),
+                Some((base, v, spaces)) => addvalue(
+                    &base,
+                    &format!("{}{}", " ".repeat(spaces), &query[v.len() + 1..]),
+                    val,
+                ),
                 None => addvalue(&configbase, query, val),
             }
         }
@@ -74,7 +97,9 @@ fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
         .node()
         .green()
         .to_owned();
-    if index == 0 { index += 1; };
+    if index == 0 {
+        index += 1;
+    };
     let new = configbase
         .green()
         .insert_child(index, rnix::NodeOrToken::Node(input));
@@ -83,7 +108,11 @@ fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
 }
 
 // Currently indentation is badly done by inserting spaces, it should check the spaces of the previous attr instead
-fn findattrset(configbase: &SyntaxNode, name: &str, spaces: usize) -> Option<(SyntaxNode, String, usize)> {
+fn findattrset(
+    configbase: &SyntaxNode,
+    name: &str,
+    spaces: usize,
+) -> Option<(SyntaxNode, String, usize)> {
     for child in configbase.children() {
         if child.kind() == SyntaxKind::NODE_KEY_VALUE {
             // Now we have to read all the indent values from the key
@@ -99,7 +128,7 @@ fn findattrset(configbase: &SyntaxNode, name: &str, spaces: usize) -> Option<(Sy
                         // We have key, now lets find the attrset
                         for possibleset in child.children() {
                             if possibleset.kind() == SyntaxKind::NODE_ATTR_SET {
-                                return Some((possibleset, name.to_string(), spaces+2));
+                                return Some((possibleset, name.to_string(), spaces + 2));
                             }
                         }
                         return None;
@@ -109,7 +138,7 @@ fn findattrset(configbase: &SyntaxNode, name: &str, spaces: usize) -> Option<(Sy
                             // We have a subkey, so we need to recurse
                             let subkey = &qkey[key.len()..].join(".").to_string();
                             let newbase = getcfgbase(&child).unwrap();
-                            let subattr = findattrset(&newbase, subkey, spaces+2);
+                            let subattr = findattrset(&newbase, subkey, spaces + 2);
                             match subattr {
                                 Some((node, _, spaces)) => {
                                     return Some((node, name.to_string(), spaces));
@@ -177,6 +206,61 @@ fn modvalue(node: &SyntaxNode, val: &str) -> Option<SyntaxNode> {
         }
     }
     None
+}
+
+// Add an attribute to the config
+fn addattrval(
+    f: &str,
+    configbase: &SyntaxNode,
+    query: &str,
+    val: &SyntaxNode,
+) -> Result<String, WriteError> {
+    let mut attrmap = HashMap::new();
+    buildattrvec(val, vec![], &mut attrmap);
+    let mut file = f.to_string();
+
+    if attrmap.iter().any(|(key, _)| findattr(configbase, &format!("{}.{}", query, key)).is_some()) {
+        for (key, val) in attrmap {
+            match write(&file, &format!("{}.{}", query, key), &val) {
+                Ok(x) => {
+                    file = x
+                },
+                Err(e) => return Err(e),
+            }
+        }
+    } else if let Some(c) = getcfgbase(&rnix::parse(&file).node()) {
+        file = addvalue(&c, query, &val.to_string()).to_string();
+    }    
+    Ok(file)
+}
+
+fn buildattrvec(val: &SyntaxNode, prefix: Vec<String>, map: &mut HashMap<String, String>) {
+    for child in val.children() {
+        if child.kind() == SyntaxKind::NODE_KEY_VALUE {
+            if let Some(subchild) = child.children().last() {
+                if subchild.kind() == SyntaxKind::NODE_ATTR_SET {
+                    for c in child.children() {
+                        if c.kind() == SyntaxKind::NODE_KEY {
+                            let key = getkey(&c);
+                            let mut newprefix = prefix.clone();
+                            newprefix.append(&mut key.clone());
+                            buildattrvec(&subchild, newprefix, map);
+                            break;
+                        }
+                    }
+                } else {
+                    for c in child.children() {
+                        if c.kind() == SyntaxKind::NODE_KEY {
+                            let key = getkey(&c);
+                            let mut newprefix = prefix.clone();
+                            newprefix.append(&mut key.clone());
+                            map.insert(newprefix.join("."), subchild.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 pub fn addtoarr(f: &str, query: &str, items: Vec<String>) -> Result<String, WriteError> {
@@ -280,10 +364,12 @@ fn rmarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
             for elem in green.children() {
                 if elem.as_node() != None && items.contains(&elem.to_string()) {
                     let index = match green.children().position(|x| match x.into_node() {
-                        Some(x) => if let Some(y) = elem.as_node() {
-                            *x == y.to_owned().to_owned()
-                        } else {
-                            false
+                        Some(x) => {
+                            if let Some(y) = elem.as_node() {
+                                *x == y.to_owned().to_owned()
+                            } else {
+                                false
+                            }
                         }
                         None => false,
                     }) {
@@ -377,8 +463,8 @@ fn deref_aux(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
                             let subkey = &qkey[key.len()..].join(".").to_string();
                             let newbase = getcfgbase(&child).unwrap();
                             let subattr = deref_aux(&newbase, subkey);
-                            if subattr.is_some() {
-                                return subattr;
+                            if let Some(s) = subattr {
+                                return Some(s);
                             }
                         }
                     }

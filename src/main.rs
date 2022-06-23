@@ -68,6 +68,14 @@ fn writeerr(e: nix_editor::write::WriteError, file: &str, attr: &str) {
             );
             printerror(&msg);
         }
+        nix_editor::write::WriteError::WriteValueToSet => {
+            msg = format!(
+                "cannot modify '{}' : {}",
+                attr.purple(),
+                "Cannot set an attribute-set to a value".purple()
+            );
+            printerror(&msg);
+        }
     }
 }
 

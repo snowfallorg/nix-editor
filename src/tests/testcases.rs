@@ -213,6 +213,49 @@ fn write_val4() {
 }
 
 #[test]
+fn write_val5() {
+    let config =
+        fs::read_to_string(Path::new("src/tests/format2.nix")).expect("Failed to read file");
+
+    // Write value to file that does not yet exist
+    let out = match write(&config, "a", "{ b = false; c = { d = \"test\"; }; }") {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to write to file"),
+    };
+
+    // Check if read value is correct
+    let r = match readvalue(&out, "a") {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to read value"),
+    };
+
+    // Check if read value is false
+    assert!(r == "{\n  b = false;\n  c = {\n    d = \"test\";\n  };\n}")
+}
+
+#[test]
+fn write_val6() {
+    let config =
+        fs::read_to_string(Path::new("src/tests/format2.nix")).expect("Failed to read file");
+
+    // Write value to file that does not yet exist
+    let out = match write(&config, "x", "{ y = false; z = \"test\"; }") {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to write to file"),
+    };
+
+    // Check if read value is correct
+    let r = match readvalue(&out, "x") {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to read value"),
+    };
+
+    // Check if read value is false
+    assert!(r == "{\n  y = false;\n  z = \"test\";\n}");
+    assert!(out == "{\n  a = {\n    b = true;\n  };\n  a.c = {\n    d = \"test\";\n  };\n  x = { y = false; z = \"test\"; };\n}")
+}
+
+#[test]
 fn write_format1() {
     let config =
         fs::read_to_string(Path::new("src/tests/format.nix")).expect("Failed to read file");
@@ -256,7 +299,6 @@ fn write_format2() {
         Err(_) => panic!("Failed to write to file"),
     };
 
-    println!("{out}");
     // Check if read value is correct
     let r = match readvalue(&out, "a.d.g") {
         Ok(s) => s,
@@ -418,7 +460,6 @@ fn read_collect() {
 
     // Check if read value is "pkgs"
     assert!(map.len() == 11);
-    println!("{:?}", map.get("imports").unwrap());
     assert!(map.get("imports").unwrap() == "[ # Include the results of the hardware scan.\n      ./hardware-configuration.nix\n    ]");
     assert!(map.get("boot.loader.systemd-boot.enable").unwrap() == "true");
     assert!(map.get("boot.loader.efi.canTouchEfiVariables").unwrap() == "true");
@@ -439,7 +480,6 @@ fn main_test() {
 
     // Check if read value is "pkgs"
     assert!(map.len() == 11);
-    println!("{:?}", map.get("imports").unwrap());
     assert!(map.get("imports").unwrap() == "[ # Include the results of the hardware scan.\n      ./hardware-configuration.nix\n    ]");
     assert!(map.get("boot.loader.systemd-boot.enable").unwrap() == "true");
     assert!(map.get("boot.loader.efi.canTouchEfiVariables").unwrap() == "true");

@@ -30,7 +30,7 @@ pub fn readvalue(f: &str, query: &str) -> Result<String, ReadError> {
     Ok(outnode)
 }
 
-fn findvalue(node: &SyntaxNode) -> Option<SyntaxNode> {
+pub fn findvalue(node: &SyntaxNode) -> Option<SyntaxNode> {
     // First find the IDENT node
     for child in node.children() {
         if child.kind() != SyntaxKind::NODE_KEY {
