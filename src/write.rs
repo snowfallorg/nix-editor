@@ -27,11 +27,14 @@ pub fn write(f: &str, query: &str, val: &str) -> Result<String, WriteError> {
             return Err(WriteError::ParseError);
         }
     };
-    if let Some(x) = getcfgbase(&rnix::parse(val).node()) {
-        if x.kind() == SyntaxKind::NODE_ATTR_SET {
-            return addattrval(f, &configbase, query, &x);
+    if val.trim_start().starts_with('{') && val.trim_end().ends_with('}'){
+        if let Some(x) = getcfgbase(&rnix::parse(val).node()) {
+            if x.kind() == SyntaxKind::NODE_ATTR_SET {
+                return addattrval(f, &configbase, query, &x);
+            }
         }
     }
+    
     let outnode = match findattr(&configbase, query) {
         Some(x) => {
             if let Some(n) = x.children().last() {
