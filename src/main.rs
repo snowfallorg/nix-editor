@@ -1,6 +1,6 @@
 use clap::{self, ArgGroup, Parser};
 use nix_editor::{write::deref, write::write, write::addtoarr};
-use std::{fs, path::Path, io::Write};
+use std::{fs, path::Path, io, io::Write};
 use owo_colors::*;
 
 #[derive(Parser)]
@@ -167,6 +167,7 @@ fn main() {
     if args.output.is_some() {
         writetofile(&args.output.unwrap(), &output)
     } else {
-        println!("{}", output);
+        print!("{}", output);
+        io::stdout().flush().unwrap();
     }
 }
