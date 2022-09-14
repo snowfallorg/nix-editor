@@ -28,6 +28,10 @@ struct Args {
     /// Output file for modified config or read value
     #[clap(short, long)]
     output: Option<String>,
+
+    /// Prints console output without newlines or trimmed output
+    #[clap(short, long)]
+    raw: bool,
 }
 
 fn writetofile(file: &str, out: &str) {
@@ -167,6 +171,13 @@ fn main() {
     if args.output.is_some() {
         writetofile(&args.output.unwrap(), &output)
     } else {
-        println!("{}", output);
+        if args.raw {
+            print!("{}", output);
+            if let Err(e) = std::io::stdout().flush() {
+                panic!("{}", e);
+            }
+        } else {
+            println!("{}", output.trim());
+        }
     }
 }
