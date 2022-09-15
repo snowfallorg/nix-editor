@@ -1,6 +1,6 @@
 use clap::{self, ArgGroup, Parser};
 use nix_editor::{write::deref, write::write, write::addtoarr};
-use std::{fs, path::Path, io::Write};
+use std::{fs, io::Write};
 use owo_colors::*;
 
 #[derive(Parser)]
@@ -33,6 +33,10 @@ struct Args {
     /// Output file for modified config or read value
     #[clap(short, long)]
     output: Option<String>,
+
+    /// Prints console output without newlines or trimmed output
+    #[clap(short, long)]
+    raw: bool,
 }
 
 fn writetofile(file: &str, out: &str) {
@@ -127,11 +131,13 @@ fn printerror(msg: &str) {
 fn main() {
     let args = Args::parse();
     let output;
-    if !Path::is_file(Path::new(&args.file)) {
-        nofileerr(&args.file);
-        std::process::exit(1);
-    }
-    let f = fs::read_to_string(&args.file).expect("Failed to read file");
+    let f = match fs::read_to_string(&args.file) {
+        Ok(x) => x,
+        Err(_) => {
+            nofileerr(&args.file);
+            std::process::exit(1);
+        }
+    };
     if args.arr.is_some() {
         output = match addtoarr(&f, &args.attribute, vec![args.arr.unwrap()]) {
             Ok(x) => x,
@@ -173,6 +179,13 @@ fn main() {
     } else if args.output.is_some() {
         writetofile(&args.output.unwrap(), &output)
     } else {
-        println!("{}", output);
+        if args.raw {
+            print!("{}", output);
+            if let Err(e) = std::io::stdout().flush() {
+                panic!("{}", e);
+            }
+        } else {
+            println!("{}", output.trim());
+        }
     }
 }
