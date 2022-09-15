@@ -1,6 +1,6 @@
 use clap::{self, ArgGroup, Parser};
 use nix_editor::{write::deref, write::write, write::addtoarr};
-use std::{fs, path::Path, io::Write};
+use std::{fs, io::Write};
 use owo_colors::*;
 
 #[derive(Parser)]
@@ -126,11 +126,13 @@ fn printerror(msg: &str) {
 fn main() {
     let args = Args::parse();
     let output;
-    if !Path::is_file(Path::new(&args.file)) {
-        nofileerr(&args.file);
-        std::process::exit(1);
-    }
-    let f = fs::read_to_string(&args.file).expect("Failed to read file");
+    let f = match fs::read_to_string(&args.file) {
+        Ok(x) => x,
+        Err(_) => {
+            nofileerr(&args.file);
+            std::process::exit(1);
+        }
+    };
 
     if args.arr.is_some() {
         output = match addtoarr(&f, &args.attribute, vec![args.arr.unwrap()]) {
