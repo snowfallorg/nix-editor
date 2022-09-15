@@ -25,6 +25,11 @@ struct Args {
     #[clap(short, long)]
     deref: bool,
 
+    /// Edit the file in-place
+    #[clap(short, long)]
+    #[clap(requires("write"))]
+    inplace: bool,
+
     /// Output file for modified config or read value
     #[clap(short, long)]
     output: Option<String>,
@@ -133,7 +138,6 @@ fn main() {
             std::process::exit(1);
         }
     };
-
     if args.arr.is_some() {
         output = match addtoarr(&f, &args.attribute, vec![args.arr.unwrap()]) {
             Ok(x) => x,
@@ -170,7 +174,9 @@ fn main() {
         };
     }
 
-    if args.output.is_some() {
+    if args.inplace {
+        writetofile(&args.file, &output)
+    } else if args.output.is_some() {
         writetofile(&args.output.unwrap(), &output)
     } else {
         if args.raw {
