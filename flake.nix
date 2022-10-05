@@ -26,7 +26,12 @@
     defaultPackage = self.packages.${system}.nixeditor;
 
     devShell = pkgs.mkShell {
-          buildInputs = with pkgs; [ rustc cargo ];
+          buildInputs = with pkgs; [ 
+            rust-analyzer
+            rustc
+            cargo
+            clippy
+          ];
         };
   });
 }

@@ -1,21 +1,18 @@
-use std::{collections::HashMap, hash::Hash, thread::panicking};
+use std::collections::HashMap;
 
-use crate::{
-    parse::{findattr, getcfgbase, getkey},
-    read::findvalue,
-};
-use failure::Fail;
+use crate::parse::{findattr, getcfgbase, getkey};
+use thiserror::Error;
 use rnix::{self, SyntaxKind, SyntaxNode};
 
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum WriteError {
-    #[fail(display = "Write Error: Error while parsing.")]
+    #[error("Error while parsing.")]
     ParseError,
-    #[fail(display = "Write Error: No attributes.")]
+    #[error("No attributes.")]
     NoAttr,
-    #[fail(display = "Write Error: Error with array.")]
+    #[error("Error with array.")]
     ArrayError,
-    #[fail(display = "Write Error: Writing value to attribute set.")]
+    #[error("Writing value to attribute set.")]
     WriteValueToSet,
 }
 
@@ -369,7 +366,7 @@ fn rmarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
                     let index = match green.children().position(|x| match x.into_node() {
                         Some(x) => {
                             if let Some(y) = elem.as_node() {
-                                *x == y.to_owned().to_owned()
+                                x.eq(y)
                             } else {
                                 false
                             }

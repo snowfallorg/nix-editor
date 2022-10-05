@@ -16,5 +16,5 @@ include = [
 [dependencies]
 clap =  { version = "3.2", features = ["derive"] }
 rnix = "0.10"
-owo-colors = "3.4"
-failure = { version = "0.1", features = ["derive"] }
+owo-colors = "3.5"
+thiserror = "1.0"
