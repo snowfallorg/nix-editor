@@ -99,6 +99,21 @@ fn read_val6() {
 }
 
 #[test]
+fn read_valstring() {
+    let config =
+        fs::read_to_string(Path::new("src/tests/configuration.nix")).expect("Failed to read file");
+
+    // Write value to file that does not yet exist
+    let out = match readvalue(&config, "users.users.\"jane\".isNormalUser") {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to read value"),
+    };
+
+    // Check if read value is correct
+    assert!(out == "true")
+}
+
+#[test]
 fn readarr_val1() {
     let config =
         fs::read_to_string(Path::new("src/tests/configuration.nix")).expect("Failed to read file");
@@ -458,14 +473,14 @@ fn read_collect() {
     let configbase = getcfgbase(&rnix::parse(&config).node()).unwrap();
     collectattrs(&configbase, &mut map);
 
-    // Check if read value is "pkgs"
-    assert!(map.len() == 11);
+    assert!(map.len() == 12);
     assert!(map.get("imports").unwrap() == "[ # Include the results of the hardware scan.\n      ./hardware-configuration.nix\n    ]");
     assert!(map.get("boot.loader.systemd-boot.enable").unwrap() == "true");
     assert!(map.get("boot.loader.efi.canTouchEfiVariables").unwrap() == "true");
     assert!(map.get("programs.gnupg.agent.enable").unwrap() == "true");
     assert!(map.get("programs.gnupg.agent.enableSSHSupport").unwrap() == "true");
     assert!(map.get("system.stateVersion").unwrap() == "\"22.05\"");
+    assert!(map.get("users.users.\"jane\".isNormalUser").unwrap() == "true");
 }
 
 #[test]
@@ -478,8 +493,7 @@ fn main_test() {
     let configbase = getcfgbase(&rnix::parse(&config).node()).unwrap();
     collectattrs(&configbase, &mut map);
 
-    // Check if read value is "pkgs"
-    assert!(map.len() == 11);
+    assert!(map.len() == 12);
     assert!(map.get("imports").unwrap() == "[ # Include the results of the hardware scan.\n      ./hardware-configuration.nix\n    ]");
     assert!(map.get("boot.loader.systemd-boot.enable").unwrap() == "true");
     assert!(map.get("boot.loader.efi.canTouchEfiVariables").unwrap() == "true");

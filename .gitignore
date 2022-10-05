@@ -1,6 +1,7 @@
-/target
-/result
+.envrc
+.vscode
 *.html
 *.txt
-.vscode
-shell.nix
+/.direnv
+/result
+/target

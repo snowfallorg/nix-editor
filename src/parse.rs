@@ -8,15 +8,15 @@ pub fn findattr(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
     let mut childvec: Vec<(String, String)> = Vec::new();
     for child in configbase.children() {
         if child.kind() == SyntaxKind::NODE_KEY_VALUE {
+            let qkey = name
+                .split('.')
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>();
             // Now we have to read all the indent values from the key
             for subchild in child.children() {
                 if subchild.kind() == SyntaxKind::NODE_KEY {
                     // We have a key, now we need to check if it's the one we're looking for
                     let key = getkey(&subchild);
-                    let qkey = name
-                        .split('.')
-                        .map(|s| s.to_string())
-                        .collect::<Vec<String>>();
                     if qkey == key {
                         if child
                             .children()
@@ -132,7 +132,7 @@ pub fn collectattrs(configbase: &SyntaxNode, map: &mut HashMap<String, String>)
 pub fn getkey(node: &SyntaxNode) -> Vec<String> {
     let mut key = vec![];
     for child in node.children() {
-        if child.kind() == SyntaxKind::NODE_IDENT {
+        if child.kind() == SyntaxKind::NODE_IDENT || child.kind() == SyntaxKind::NODE_STRING {
             key.push(child.text().to_string());
         }
     }
