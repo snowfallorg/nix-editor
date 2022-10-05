@@ -18,3 +18,4 @@ clap =  { version = "4.0", features = ["derive"] }
 rnix = "0.10"
 owo-colors = "3.5"
 thiserror = "1.0"
+nixpkgs-fmt = "1.3"

@@ -29,7 +29,9 @@
           buildInputs = with pkgs; [ 
             rust-analyzer
             rustc
+            rustfmt
             cargo
+            cargo-tarpaulin
             clippy
           ];
         };

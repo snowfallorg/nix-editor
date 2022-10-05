@@ -1,7 +1,7 @@
 use clap::{self, ArgGroup, Parser};
-use nix_editor::{write::deref, write::write, write::addtoarr};
-use std::{fs, io::Write};
+use nix_editor::{write::addtoarr, write::deref, write::write};
 use owo_colors::*;
+use std::{fs, io::Write};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -37,18 +37,25 @@ struct Args {
     /// Prints console output without newlines or trimmed output
     #[arg(short, long)]
     raw: bool,
+
+    /// Formats output using nixpkgs-fmt. Helps when writing new values
+    #[arg(short, long)]
+    format: bool,
 }
 
-fn writetofile(file: &str, out: &str) {
+fn writetofile(file: &str, out: &str, format: bool) {
     let mut outfile = std::fs::File::create(file).expect("create failed");
-    outfile.write_all(out.as_bytes()).expect("write failed");
+    if format {
+        outfile
+            .write_all(nixpkgs_fmt::reformat_string(out).as_bytes())
+            .expect("write failed");
+    } else {
+        outfile.write_all(out.as_bytes()).expect("write failed");
+    }
 }
 
 fn printread(f: &str, attr: &str) -> Result<String, nix_editor::read::ReadError> {
-    match nix_editor::read::readvalue(f, attr) {
-        Ok(x) => Ok(x),
-        Err(e) => Err(e),
-    }
+    nix_editor::read::readvalue(f, attr)
 }
 
 fn writeerr(e: nix_editor::write::WriteError, file: &str, attr: &str) {
@@ -127,7 +134,6 @@ fn printerror(msg: &str) {
     println!("{} {}", "error:".red(), msg);
 }
 
-
 fn main() {
     let args = Args::parse();
     let output;
@@ -146,9 +152,7 @@ fn main() {
                 std::process::exit(1)
             }
         };
-    }
-
-    else if args.val.is_some() {
+    } else if args.val.is_some() {
         output = match write(&f, &args.attribute, &args.val.unwrap()) {
             Ok(x) => x,
             Err(e) => {
@@ -175,17 +179,29 @@ fn main() {
     }
 
     if args.inplace {
-        writetofile(&args.file, &output)
+        writetofile(&args.file, &output, args.format);
     } else if args.output.is_some() {
-        writetofile(&args.output.unwrap(), &output)
-    } else {
-        if args.raw {
-            print!("{}", output);
-            if let Err(e) = std::io::stdout().flush() {
-                panic!("{}", e);
+        writetofile(&args.output.unwrap(), &output, args.format);
+    } else if args.raw {
+        print!(
+            "{}",
+            if args.format {
+                nixpkgs_fmt::reformat_string(&output)
+            } else {
+                output
             }
-        } else {
-            println!("{}", output.trim());
+        );
+        if let Err(e) = std::io::stdout().flush() {
+            panic!("{}", e);
         }
+    } else {
+        println!(
+            "{}",
+            if args.format {
+                nixpkgs_fmt::reformat_string(&output).trim().to_string()
+            } else {
+                output.trim().to_string()
+            }
+        );
     }
 }

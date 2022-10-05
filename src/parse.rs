@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Write};
 
 use rnix::{self, SyntaxKind, SyntaxNode};
 
@@ -74,7 +74,7 @@ pub fn findattr(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
         } else {
             let mut list = String::new();
             for (k, v) in childvec.iter() {
-                list.push_str(&format!("  {} = {};\n", k, v));
+                let _ = writeln!(list, "  {} = {};", k, v);
             }
             list = list.strip_suffix('\n').unwrap_or(&list).to_string();
             s = format!("{{ {} = {{\n{}\n}}; }}", name, list);
