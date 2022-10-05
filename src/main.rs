@@ -4,8 +4,8 @@ use std::{fs, io::Write};
 use owo_colors::*;
 
 #[derive(Parser)]
-#[clap(author, version, about, long_about = None)]
-#[clap(group(ArgGroup::new("write").args(&["val", "deref", "arr"])))]
+#[command(author, version, about, long_about = None)]
+#[command(group(ArgGroup::new("write").args(&["val", "deref", "arr"])))]
 struct Args {
     /// Configuration file to read
     file: String,
@@ -14,28 +14,28 @@ struct Args {
     attribute: String,
 
     /// Value to write
-    #[clap(short, long)]
+    #[arg(short, long)]
     val: Option<String>,
 
     /// Element to add
-    #[clap(short, long)]
+    #[arg(short, long)]
     arr: Option<String>,
 
     /// Dereference the value of the attribute
-    #[clap(short, long)]
+    #[arg(short, long)]
     deref: bool,
 
     /// Edit the file in-place
-    #[clap(short, long)]
-    #[clap(requires("write"))]
+    #[arg(short, long)]
+    #[arg(requires("write"))]
     inplace: bool,
 
     /// Output file for modified config or read value
-    #[clap(short, long)]
+    #[arg(short, long)]
     output: Option<String>,
 
     /// Prints console output without newlines or trimmed output
-    #[clap(short, long)]
+    #[arg(short, long)]
     raw: bool,
 }
 
