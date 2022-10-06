@@ -269,7 +269,7 @@ dependencies = [
 
 [[package]]
 name = "nix-editor"
-version = "0.2.12"
+version = "0.3.0-beta.1"
 dependencies = [
  "clap 4.0.9",
  "nixpkgs-fmt",
