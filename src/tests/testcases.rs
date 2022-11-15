@@ -17,7 +17,7 @@ fn read_val1() {
     };
 
     // Check if read value is correct
-    assert!(out == "\"22.05\"")
+    assert_eq!(out, "\"22.05\"")
 }
 
 #[test]
@@ -32,7 +32,7 @@ fn read_val2() {
     };
 
     // Check if read value is correct
-    assert!(out == "true")
+    assert_eq!(out, "true")
 }
 
 #[test]
@@ -65,7 +65,7 @@ fn read_val4() {
     };
 
     // Check if read value is correct
-    assert!(out == "{\n  systemd-boot.enable = true;\n  efi.canTouchEfiVariables = true;\n}")
+    assert_eq!(out, "{\n  systemd-boot.enable = true;\n  efi.canTouchEfiVariables = true;\n}")
 }
 
 #[test]
@@ -80,7 +80,7 @@ fn read_val5() {
     };
 
     // Check if read value is correct
-    assert!(out == "{ stateVersion = \"22.05\"; }")
+    assert_eq!(out, "{ stateVersion = \"22.05\"; }")
 }
 
 #[test]
@@ -95,7 +95,7 @@ fn read_val6() {
     };
 
     // Check if read value is correct
-    assert!(out == "{\n  b = true;\n  c = {\n    d = \"test\";\n  };\n}")
+    assert_eq!(out, "{\n  b = true;\n  c = {\n    d = \"test\";\n  };\n}")
 }
 
 #[test]
@@ -110,7 +110,7 @@ fn read_valstring() {
     };
 
     // Check if read value is correct
-    assert!(out == "true")
+    assert_eq!(out, "true")
 }
 
 #[test]
@@ -125,7 +125,7 @@ fn readarr_val1() {
     };
 
     // Check if read value is correct
-    assert!(out == vec!["./hardware-configuration.nix"])
+    assert_eq!(out, vec!["./hardware-configuration.nix"])
 }
 
 #[test]
@@ -140,7 +140,7 @@ fn readarr_val2() {
     };
 
     // Check if read value is correct
-    assert!(out == vec!["vim", "wget", "firefox"])
+    assert_eq!(out, vec!["vim", "wget", "firefox"])
 }
 
 #[test]
@@ -161,7 +161,7 @@ fn write_val1() {
     };
 
     // Check if read value is false
-    assert!(r == "false")
+    assert_eq!(r, "false")
 }
 
 #[test]
@@ -182,7 +182,7 @@ fn write_val2() {
     };
 
     // Check if read value is "test"
-    assert!(r == "\"test\"")
+    assert_eq!(r, "\"test\"")
 }
 
 #[test]
@@ -203,7 +203,7 @@ fn write_val3() {
     };
 
     // Check if read value is true
-    assert!(r == "true")
+    assert_eq!(r, "true")
 }
 
 #[test]
@@ -224,7 +224,7 @@ fn write_val4() {
     };
 
     // Check if read value is false
-    assert!(r == "false")
+    assert_eq!(r, "false")
 }
 
 #[test]
@@ -245,7 +245,7 @@ fn write_val5() {
     };
 
     // Check if read value is false
-    assert!(r == "{\n  b = false;\n  c = {\n    d = \"test\";\n  };\n}")
+    assert_eq!(r, "{\n  b = false;\n  c = {\n    d = \"test\";\n  };\n}")
 }
 
 #[test]
@@ -266,8 +266,8 @@ fn write_val6() {
     };
 
     // Check if read value is false
-    assert!(r == "{\n  y = false;\n  z = \"test\";\n}");
-    assert!(out == "{\n  a = {\n    b = true;\n  };\n  a.c = {\n    d = \"test\";\n  };\n  x = { y = false; z = \"test\"; };\n}")
+    assert_eq!(r, "{\n  y = false;\n  z = \"test\";\n}");
+    assert_eq!(out, "{\n  a = {\n    b = true;\n  };\n  a.c = {\n    d = \"test\";\n  };\n  x = { y = false; z = \"test\"; };\n}")
 }
 
 #[test]
@@ -288,7 +288,7 @@ fn write_format1() {
     };
 
     // Check if read value is false
-    assert!(r == "false");
+    assert_eq!(r, "false");
     // Check format
     let expectedout = r#"{
   a = {
@@ -300,7 +300,7 @@ fn write_format1() {
     c = false;
   };
 }"#;
-    assert!(out.eq(expectedout))
+    assert_eq!(out, expectedout.to_string())
 }
 
 #[test]
@@ -321,7 +321,7 @@ fn write_format2() {
     };
 
     // Check if read value is "test"
-    assert!(r == "\"test\"");
+    assert_eq!(r, "\"test\"");
     // Check format
     let expectedout = r#"{
   a = {
@@ -333,7 +333,7 @@ fn write_format2() {
     };
   };
 }"#;
-    assert!(out.eq(expectedout))
+    assert_eq!(out, expectedout.to_string())
 }
 
 #[test]
@@ -358,7 +358,7 @@ fn write_arr1() {
     };
 
     // Check if read value is "test"
-    assert!(r == vec!["vim", "wget", "firefox", "nano", "unzip"])
+    assert_eq!(r, vec!["vim", "wget", "firefox", "nano", "unzip"])
 }
 
 #[test]
@@ -401,7 +401,7 @@ fn write_arr2() {
     };
 
     // Check if read value is "test"
-    assert!(r == vec!["one", "three"])
+    assert_eq!(r, vec!["one", "three"])
 }
 
 #[test]
@@ -440,7 +440,7 @@ fn get_with1() {
     };
 
     // Check if read value is "pkgs"
-    assert!(out == vec!["pkgs"])
+    assert_eq!(out, vec!["pkgs"])
 }
 
 #[test]
@@ -460,7 +460,7 @@ fn get_with2() {
     };
 
     // Check if read value is "pkgs"
-    assert!(out2 == vec!["x", "y"])
+    assert_eq!(out2, vec!["x", "y"])
 }
 
 #[test]
@@ -470,17 +470,17 @@ fn read_collect() {
 
     // Write value to file that does not yet exist
     let mut map  = HashMap::new();
-    let configbase = getcfgbase(&rnix::parse(&config).node()).unwrap();
+    let configbase = getcfgbase(&rnix::Root::parse(&config).syntax()).unwrap();
     collectattrs(&configbase, &mut map);
 
-    assert!(map.len() == 12);
-    assert!(map.get("imports").unwrap() == "[ # Include the results of the hardware scan.\n      ./hardware-configuration.nix\n    ]");
-    assert!(map.get("boot.loader.systemd-boot.enable").unwrap() == "true");
-    assert!(map.get("boot.loader.efi.canTouchEfiVariables").unwrap() == "true");
-    assert!(map.get("programs.gnupg.agent.enable").unwrap() == "true");
-    assert!(map.get("programs.gnupg.agent.enableSSHSupport").unwrap() == "true");
-    assert!(map.get("system.stateVersion").unwrap() == "\"22.05\"");
-    assert!(map.get("users.users.\"jane\".isNormalUser").unwrap() == "true");
+    assert_eq!(map.len(), 12);
+    assert_eq!(map.get("imports").unwrap(), "[ # Include the results of the hardware scan.\n      ./hardware-configuration.nix\n    ]");
+    assert_eq!(map.get("boot.loader.systemd-boot.enable").unwrap(), "true");
+    assert_eq!(map.get("boot.loader.efi.canTouchEfiVariables").unwrap(), "true");
+    assert_eq!(map.get("programs.gnupg.agent.enable").unwrap(), "true");
+    assert_eq!(map.get("programs.gnupg.agent.enableSSHSupport").unwrap(), "true");
+    assert_eq!(map.get("system.stateVersion").unwrap(), "\"22.05\"");
+    assert_eq!(map.get("users.users.\"jane\".isNormalUser").unwrap(), "true");
 }
 
 #[test]
@@ -490,16 +490,16 @@ fn main_test() {
 
     // Write value to file that does not yet exist
     let mut map  = HashMap::new();
-    let configbase = getcfgbase(&rnix::parse(&config).node()).unwrap();
+    let configbase = getcfgbase(&rnix::Root::parse(&config).syntax()).unwrap();
     collectattrs(&configbase, &mut map);
 
-    assert!(map.len() == 12);
-    assert!(map.get("imports").unwrap() == "[ # Include the results of the hardware scan.\n      ./hardware-configuration.nix\n    ]");
-    assert!(map.get("boot.loader.systemd-boot.enable").unwrap() == "true");
-    assert!(map.get("boot.loader.efi.canTouchEfiVariables").unwrap() == "true");
-    assert!(map.get("programs.gnupg.agent.enable").unwrap() == "true");
-    assert!(map.get("programs.gnupg.agent.enableSSHSupport").unwrap() == "true");
-    assert!(map.get("system.stateVersion").unwrap() == "\"22.05\"");
+    assert_eq!(map.len(), 12);
+    assert_eq!(map.get("imports").unwrap(), "[ # Include the results of the hardware scan.\n      ./hardware-configuration.nix\n    ]");
+    assert_eq!(map.get("boot.loader.systemd-boot.enable").unwrap(), "true");
+    assert_eq!(map.get("boot.loader.efi.canTouchEfiVariables").unwrap(), "true");
+    assert_eq!(map.get("programs.gnupg.agent.enable").unwrap(), "true");
+    assert_eq!(map.get("programs.gnupg.agent.enableSSHSupport").unwrap(), "true");
+    assert_eq!(map.get("system.stateVersion").unwrap(), "\"22.05\"");
 }
 
 #[test]
@@ -514,7 +514,7 @@ fn collect1() {
     };
 
     // Check if read values are correct
-    assert!(out.get("a.b") == Some(&String::from("true")));
+    assert_eq!(out.get("a.b"), Some(&String::from("true")));
 }
 
 #[test]
@@ -529,7 +529,7 @@ fn collect2() {
     };
 
     // Check if read values are correct
-    assert!(out.get("boot.loader.efi.canTouchEfiVariables") == Some(&String::from("true")));
-    assert!(out.get("programs.gnupg.agent.enableSSHSupport") == Some(&String::from("true")));
-    assert!(out.get("system.stateVersion") == Some(&String::from("\"22.05\"")));
+    assert_eq!(out.get("boot.loader.efi.canTouchEfiVariables"), Some(&String::from("true")));
+    assert_eq!(out.get("programs.gnupg.agent.enableSSHSupport"), Some(&String::from("true")));
+    assert_eq!(out.get("system.stateVersion"), Some(&String::from("\"22.05\"")));
 }
