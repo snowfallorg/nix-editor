@@ -1,7 +1,4 @@
 {
-
-  name = "nix-editor";
-
   description = "Nix configuration command line editor";
 
   inputs = {
