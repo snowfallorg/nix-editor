@@ -26,7 +26,7 @@
     defaultPackage = self.packages.${system}.nixeditor;
 
     checks = self.packages.${system};
-    Hydrajobs = self.packages.${system};
+    hydraJobs = self.packages.${system};
 
     devShell = pkgs.mkShell {
           buildInputs = with pkgs; [ 
