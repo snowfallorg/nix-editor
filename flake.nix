@@ -37,7 +37,8 @@
         };
 
     # Hydra build jobs
-    hydraJobs."<attr>"."<system>" = derivation;
+    hydraJobs = let
+      flake' = flake (inputs // { self = flake'; });
 
   });
 }
