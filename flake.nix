@@ -25,6 +25,8 @@
 
     defaultPackage = self.packages.${system}.nixeditor;
 
+    checks = self.packages.${system};
+
     devShell = pkgs.mkShell {
           buildInputs = with pkgs; [ 
             rust-analyzer
@@ -35,10 +37,5 @@
             clippy
           ];
         };
-
-    # Hydra build jobs
-    hydraJobs = let
-      flake' = flake (inputs // { self = flake'; });
-
   });
 }
