@@ -35,9 +35,5 @@
             clippy
           ];
         };
-    # system-space and pass sytem and input to each file
-    jobs = polyfillOutput ./jobs;
-    checks = polyfillOutput ./checks;
-    devShell = polyfillOutput ./shell;
   });
 }
