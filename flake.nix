@@ -36,7 +36,8 @@
           ];
         };
 
-
+    # Hydra build jobs
+    hydraJobs."<attr>"."<system>" = derivation;
 
   });
 }
