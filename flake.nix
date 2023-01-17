@@ -35,5 +35,9 @@
             clippy
           ];
         };
+
+    # Provide a single Hydra job (`hydraJobs.dwarffs`).
+    hydraJobs = deps.this.packages;
+
   });
 }
