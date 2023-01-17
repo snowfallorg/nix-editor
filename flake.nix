@@ -1,4 +1,7 @@
 {
+
+  name = "nix-editor";
+
   description = "Nix configuration command line editor";
 
   inputs = {
@@ -36,8 +39,7 @@
           ];
         };
 
-    # Provide a single Hydra job (`hydraJobs.dwarffs`).
-    hydraJobs = hydraJobs.nix-editor;
+
 
   });
 }
