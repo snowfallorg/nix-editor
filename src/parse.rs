@@ -7,14 +7,14 @@ use crate::read::ReadError;
 pub fn findattr(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
     let mut childvec: Vec<(String, String)> = Vec::new();
     for child in configbase.children() {
-        if child.kind() == SyntaxKind::NODE_KEY_VALUE {
+        if child.kind() == SyntaxKind::NODE_ATTRPATH_VALUE {
             let qkey = name
                 .split('.')
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>();
             // Now we have to read all the indent values from the key
             for subchild in child.children() {
-                if subchild.kind() == SyntaxKind::NODE_KEY {
+                if subchild.kind() == SyntaxKind::NODE_ATTRPATH {
                     // We have a key, now we need to check if it's the one we're looking for
                     let key = getkey(&subchild);
                     if qkey == key {
@@ -79,11 +79,11 @@ pub fn findattr(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
             list = list.strip_suffix('\n').unwrap_or(&list).to_string();
             s = format!("{{ {} = {{\n{}\n}}; }}", name, list);
         }
-        let ast = rnix::parse(&s);
-        if let Some(x) = ast.node().children().next() {
+        let ast = rnix::Root::parse(&s);
+        if let Some(x) = ast.syntax().children().next() {
             if x.kind() == SyntaxKind::NODE_ATTR_SET {
                 if let Some(y) = x.children().next() {
-                    if y.kind() == SyntaxKind::NODE_KEY_VALUE {
+                    if y.kind() == SyntaxKind::NODE_ATTRPATH_VALUE {
                         return Some(y);
                     }
                 }
@@ -95,8 +95,8 @@ pub fn findattr(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
 
 pub fn get_collection(f: String) -> Result<HashMap<String, String>, ReadError> {
     let mut map = HashMap::new();
-    let ast = rnix::parse(&f);
-    let configbase = match getcfgbase(&ast.node()) {
+    let ast = rnix::Root::parse(&f);
+    let configbase = match getcfgbase(&ast.syntax()) {
         Some(x) => x,
         None => {
             return Err(ReadError::ParseError);
@@ -110,11 +110,11 @@ pub fn collectattrs(configbase: &SyntaxNode, map: &mut HashMap<String, String>)
 /*-> HashMap<String, String>*/
 {
     for child in configbase.children() {
-        if child.kind() == SyntaxKind::NODE_KEY_VALUE {
+        if child.kind() == SyntaxKind::NODE_ATTRPATH_VALUE {
             let children = child.children().collect::<Vec<SyntaxNode>>();
             let nodekey = children.get(0).unwrap();
             let value = children.get(1).unwrap();
-            if nodekey.kind() == SyntaxKind::NODE_KEY {
+            if nodekey.kind() == SyntaxKind::NODE_ATTRPATH {
                 if value.kind() == SyntaxKind::NODE_ATTR_SET {
                     let mut childmap = HashMap::new();
                     collectattrs(value, &mut childmap);

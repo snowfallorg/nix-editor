@@ -1,6 +1,6 @@
 use crate::parse::{findattr, getcfgbase};
-use thiserror::Error;
 use rnix::{SyntaxKind, SyntaxNode};
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ReadError {
@@ -13,18 +13,20 @@ pub enum ReadError {
 }
 
 pub fn readvalue(f: &str, query: &str) -> Result<String, ReadError> {
-    let ast = rnix::parse(f);
-    let configbase = match getcfgbase(&ast.node()) {
+    let ast = rnix::Root::parse(f);
+    let configbase = match getcfgbase(&ast.syntax()) {
         Some(x) => x,
         None => {
             return Err(ReadError::ParseError);
         }
     };
     let outnode = match findattr(&configbase, query) {
-        Some(x) => match findvalue(&x) {
-            Some(y) => y.to_string(),
-            None => return Err(ReadError::NoAttr),
-        },
+        Some(x) => {
+            match findvalue(&x) {
+                Some(y) => y.to_string(),
+                None => return Err(ReadError::NoAttr),
+            }
+        }
         None => return Err(ReadError::NoAttr),
     };
     Ok(outnode.trim().to_string())
@@ -33,16 +35,18 @@ pub fn readvalue(f: &str, query: &str) -> Result<String, ReadError> {
 pub fn findvalue(node: &SyntaxNode) -> Option<SyntaxNode> {
     // First find the IDENT node
     for child in node.children() {
-        if child.kind() != SyntaxKind::NODE_KEY {
-            return Some(rnix::parse(&nixpkgs_fmt::reformat_string(&child.to_string())).node());
+        if child.kind() != SyntaxKind::NODE_ATTRPATH {
+            let x =
+                Some(rnix::Root::parse(&nixpkgs_fmt::reformat_string(&child.to_string())).syntax());
+            return x;
         }
     }
     None
 }
 
 pub fn getarrvals(f: &str, query: &str) -> Result<Vec<String>, ReadError> {
-    let ast = rnix::parse(f);
-    let configbase = match getcfgbase(&ast.node()) {
+    let ast = rnix::Root::parse(f);
+    let configbase = match getcfgbase(&ast.syntax()) {
         Some(x) => x,
         None => {
             return Err(ReadError::ParseError);
@@ -58,13 +62,10 @@ pub fn getarrvals(f: &str, query: &str) -> Result<Vec<String>, ReadError> {
     Ok(output)
 }
 
-fn getarrvals_aux(
-    node: &SyntaxNode,
-) -> Option<Vec<String>> {
+fn getarrvals_aux(node: &SyntaxNode) -> Option<Vec<String>> {
     for child in node.children() {
         if child.kind() == rnix::SyntaxKind::NODE_WITH {
             return getarrvals_aux(&child);
-
         }
         if child.kind() == SyntaxKind::NODE_LIST {
             let mut out = vec![];
@@ -78,8 +79,8 @@ fn getarrvals_aux(
 }
 
 pub fn getwithvalue(f: &str, query: &str) -> Result<Vec<String>, ReadError> {
-    let ast = rnix::parse(f);
-    let configbase = match getcfgbase(&ast.node()) {
+    let ast = rnix::Root::parse(f);
+    let configbase = match getcfgbase(&ast.syntax()) {
         Some(x) => x,
         None => {
             return Err(ReadError::ParseError);
@@ -95,10 +96,7 @@ pub fn getwithvalue(f: &str, query: &str) -> Result<Vec<String>, ReadError> {
     Ok(output)
 }
 
-fn getwithval_aux(
-    node: &SyntaxNode,
-    mut withvals: Vec<String>,
-) -> Option<Vec<String>> {
+fn getwithval_aux(node: &SyntaxNode, mut withvals: Vec<String>) -> Option<Vec<String>> {
     for child in node.children() {
         if child.kind() == rnix::SyntaxKind::NODE_WITH {
             for c in child.children() {

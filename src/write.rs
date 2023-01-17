@@ -17,15 +17,15 @@ pub enum WriteError {
 }
 
 pub fn write(f: &str, query: &str, val: &str) -> Result<String, WriteError> {
-    let ast = rnix::parse(f);
-    let configbase = match getcfgbase(&ast.node()) {
+    let ast = rnix::Root::parse(f);
+    let configbase = match getcfgbase(&ast.syntax()) {
         Some(x) => x,
         None => {
             return Err(WriteError::ParseError);
         }
     };
     if val.trim_start().starts_with('{') && val.trim_end().ends_with('}'){
-        if let Some(x) = getcfgbase(&rnix::parse(val).node()) {
+        if let Some(x) = getcfgbase(&rnix::Root::parse(val).syntax()) {
             if x.kind() == SyntaxKind::NODE_ATTR_SET {
                 return addattrval(f, &configbase, query, &x);
             }
@@ -67,11 +67,12 @@ fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
                 .green()
                 .children()
                 .position(|y| match y.into_node() {
-                    Some(y) => *y == x.green().to_owned(),
+                    Some(y) => y.to_owned() == x.green().into_owned(),
                     None => false,
                 })
                 .unwrap();
-            let configafter = &configbase.green().children().collect::<Vec<_>>()[i..];
+            let configgreen = configbase.green().to_owned();
+            let configafter = &configgreen.children().collect::<Vec<_>>()[i..];
             for child in configafter {
                 match child.as_token() {
                     Some(x) => {
@@ -93,8 +94,9 @@ fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
         }
         None => {}
     }
-    let input = rnix::parse(format!("\n  {} = {};", &query, &val).as_str())
-        .node()
+    let input = rnix::Root::parse(format!("\n  {} = {};", &query, &val).as_str())
+        .syntax();
+    let input = input
         .green()
         .to_owned();
     if index == 0 {
@@ -102,9 +104,9 @@ fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
     };
     let new = configbase
         .green()
-        .insert_child(index, rnix::NodeOrToken::Node(input));
+        .insert_child(index, rnix::NodeOrToken::Node(input.into_owned()));
     let replace = configbase.replace_with(new);
-    rnix::parse(&replace.to_string()).node()
+    rnix::Root::parse(&replace.to_string()).syntax()
 }
 
 // Currently indentation is badly done by inserting spaces, it should check the spaces of the previous attr instead
@@ -114,10 +116,10 @@ fn findattrset(
     spaces: usize,
 ) -> Option<(SyntaxNode, String, usize)> {
     for child in configbase.children() {
-        if child.kind() == SyntaxKind::NODE_KEY_VALUE {
+        if child.kind() == SyntaxKind::NODE_ATTRPATH_VALUE {
             // Now we have to read all the indent values from the key
             for subchild in child.children() {
-                if subchild.kind() == SyntaxKind::NODE_KEY {
+                if subchild.kind() == SyntaxKind::NODE_ATTRPATH {
                     // We have a key, now we need to check if it's the one we're looking for
                     let key = getkey(&subchild);
                     let qkey = name
@@ -161,9 +163,9 @@ fn matchval(configbase: &SyntaxNode, query: &str, acc: usize) -> Option<SyntaxNo
         .collect::<Vec<String>>();
     let q = &qvec[..acc];
     for child in configbase.children() {
-        if child.kind() == SyntaxKind::NODE_KEY_VALUE {
+        if child.kind() == SyntaxKind::NODE_ATTRPATH_VALUE {
             for subchild in child.children() {
-                if subchild.kind() == SyntaxKind::NODE_KEY {
+                if subchild.kind() == SyntaxKind::NODE_ATTRPATH {
                     let key = getkey(&subchild);
                     if key.len() >= q.len() && &key[..q.len()] == q {
                         return Some(child);
@@ -182,26 +184,26 @@ fn matchval(configbase: &SyntaxNode, query: &str, acc: usize) -> Option<SyntaxNo
 fn modvalue(node: &SyntaxNode, val: &str) -> Option<SyntaxNode> {
     // First find the IDENT node
     for child in node.children() {
-        if child.kind() != SyntaxKind::NODE_KEY {
+        if child.kind() != SyntaxKind::NODE_ATTRPATH {
             let c = &child;
             let input = val.to_string();
-            let rep = &rnix::parse(&input)
-                .node()
+            let rep = &rnix::Root::parse(&input)
+                .syntax()
                 .children()
                 .collect::<Vec<SyntaxNode>>()[0];
             let index = node
                 .green()
                 .children()
                 .position(|y| match y.into_node() {
-                    Some(y) => *y == c.green().to_owned(),
+                    Some(y) => y.to_owned() == c.green().into_owned(),
                     None => false,
                 })
                 .unwrap();
             let replaced = node
                 .green()
-                .replace_child(index, rnix::NodeOrToken::Node(rep.green().to_owned()));
+                .replace_child(index, rnix::NodeOrToken::Node(rep.green().into_owned()));
             let out = node.replace_with(replaced);
-            let rnode = rnix::parse(&out.to_string()).node();
+            let rnode = rnix::Root::parse(&out.to_string()).syntax();
             return Some(rnode);
         }
     }
@@ -228,7 +230,7 @@ fn addattrval(
                 Err(e) => return Err(e),
             }
         }
-    } else if let Some(c) = getcfgbase(&rnix::parse(&file).node()) {
+    } else if let Some(c) = getcfgbase(&rnix::Root::parse(&file).syntax()) {
         file = addvalue(&c, query, &val.to_string()).to_string();
     }    
     Ok(file)
@@ -236,11 +238,11 @@ fn addattrval(
 
 fn buildattrvec(val: &SyntaxNode, prefix: Vec<String>, map: &mut HashMap<String, String>) {
     for child in val.children() {
-        if child.kind() == SyntaxKind::NODE_KEY_VALUE {
+        if child.kind() == SyntaxKind::NODE_ATTRPATH_VALUE {
             if let Some(subchild) = child.children().last() {
                 if subchild.kind() == SyntaxKind::NODE_ATTR_SET {
                     for c in child.children() {
-                        if c.kind() == SyntaxKind::NODE_KEY {
+                        if c.kind() == SyntaxKind::NODE_ATTRPATH {
                             let key = getkey(&c);
                             let mut newprefix = prefix.clone();
                             newprefix.append(&mut key.clone());
@@ -250,7 +252,7 @@ fn buildattrvec(val: &SyntaxNode, prefix: Vec<String>, map: &mut HashMap<String,
                     }
                 } else {
                     for c in child.children() {
-                        if c.kind() == SyntaxKind::NODE_KEY {
+                        if c.kind() == SyntaxKind::NODE_ATTRPATH {
                             let key = getkey(&c);
                             let mut newprefix = prefix.clone();
                             newprefix.append(&mut key.clone());
@@ -264,8 +266,8 @@ fn buildattrvec(val: &SyntaxNode, prefix: Vec<String>, map: &mut HashMap<String,
 }
 
 pub fn addtoarr(f: &str, query: &str, items: Vec<String>) -> Result<String, WriteError> {
-    let ast = rnix::parse(f);
-    let configbase = match getcfgbase(&ast.node()) {
+    let ast = rnix::Root::parse(f);
+    let configbase = match getcfgbase(&ast.syntax()) {
         Some(x) => x,
         None => return Err(WriteError::ParseError),
     };
@@ -289,7 +291,7 @@ fn addtoarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
             return addtoarr_aux(&child, items);
         }
         if child.kind() == SyntaxKind::NODE_LIST {
-            let mut green = child.green().to_owned();
+            let mut green = child.green().into_owned();
 
             for elem in items {
                 let mut i = 0;
@@ -306,10 +308,10 @@ fn addtoarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
                         green = green.insert_child(
                             i,
                             rnix::NodeOrToken::Node(
-                                rnix::parse(&format!("\n{}{}", " ".repeat(4), elem))
-                                    .node()
+                                rnix::Root::parse(&format!("\n{}{}", " ".repeat(4), elem))
+                                    .syntax()
                                     .green()
-                                    .to_owned(),
+                                    .into_owned(),
                             ),
                         );
                         break;
@@ -319,7 +321,7 @@ fn addtoarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
             }
 
             let index = match node.green().children().position(|x| match x.into_node() {
-                Some(x) => *x == child.green().to_owned(),
+                Some(x) => x.to_owned() == child.green().into_owned(),
                 None => false,
             }) {
                 Some(x) => x,
@@ -330,7 +332,7 @@ fn addtoarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
                 .green()
                 .replace_child(index, rnix::NodeOrToken::Node(green));
             let out = node.replace_with(replace);
-            let output = rnix::parse(&out.to_string()).node();
+            let output = rnix::Root::parse(&out.to_string()).syntax();
             return Some(output);
         }
     }
@@ -338,8 +340,8 @@ fn addtoarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
 }
 
 pub fn rmarr(f: &str, query: &str, items: Vec<String>) -> Result<String, WriteError> {
-    let ast = rnix::parse(f);
-    let configbase = match getcfgbase(&ast.node()) {
+    let ast = rnix::Root::parse(f);
+    let configbase = match getcfgbase(&ast.syntax()) {
         Some(x) => x,
         None => return Err(WriteError::ParseError),
     };
@@ -359,7 +361,7 @@ fn rmarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
             return rmarr_aux(&child, items);
         }
         if child.kind() == SyntaxKind::NODE_LIST {
-            let green = child.green().to_owned();
+            let green = child.green().into_owned();
             let mut idx = vec![];
             for elem in green.children() {
                 if elem.as_node() != None && items.contains(&elem.to_string()) {
@@ -401,7 +403,7 @@ fn rmarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
             }
             let out = child.replace_with(replace);
 
-            let output = rnix::parse(&out.to_string()).node();
+            let output = rnix::Root::parse(&out.to_string()).syntax();
             return Some(output);
         }
     }
@@ -409,8 +411,8 @@ fn rmarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
 }
 
 pub fn deref(f: &str, query: &str) -> Result<String, WriteError> {
-    let ast = rnix::parse(f);
-    let configbase = match getcfgbase(&ast.node()) {
+    let ast = rnix::Root::parse(f);
+    let configbase = match getcfgbase(&ast.syntax()) {
         Some(x) => x,
         None => return Err(WriteError::ParseError),
     };
@@ -423,10 +425,10 @@ pub fn deref(f: &str, query: &str) -> Result<String, WriteError> {
 
 fn deref_aux(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
     for child in configbase.children() {
-        if child.kind() == SyntaxKind::NODE_KEY_VALUE {
+        if child.kind() == SyntaxKind::NODE_ATTRPATH_VALUE {
             // Now we have to read all the indent values from the key
             for subchild in child.children() {
-                if subchild.kind() == SyntaxKind::NODE_KEY {
+                if subchild.kind() == SyntaxKind::NODE_ATTRPATH {
                     // We have a key, now we need to check if it's the one we're looking for
                     let key = getkey(&subchild);
                     let qkey = name
@@ -439,7 +441,7 @@ fn deref_aux(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
                                 .green()
                                 .children()
                                 .position(|x| match x.into_node() {
-                                    Some(x) => *x == child.green().to_owned(),
+                                    Some(x) => x.to_owned() == child.green().into_owned(),
                                     None => false,
                                 }) {
                                 Some(x) => x,
@@ -455,7 +457,7 @@ fn deref_aux(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
                             del = del.remove_child(index);
                         }
                         let out = configbase.replace_with(del);
-                        return Some(rnix::parse(&out.to_string()).node());
+                        return Some(rnix::Root::parse(&out.to_string()).syntax());
                     } else if qkey.len() > key.len() {
                         // We have a subkey, so we need to recurse
                         if key == qkey[0..key.len()] {
