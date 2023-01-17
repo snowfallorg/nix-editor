@@ -37,7 +37,7 @@
         };
 
     # Provide a single Hydra job (`hydraJobs.dwarffs`).
-    hydraJobs = deps.nix-editor;
+    hydraJobs = hydraJobs.nix-editor;
 
   });
 }
