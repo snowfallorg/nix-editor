@@ -11,9 +11,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, naersk, ... }: 
-        systems = [ "x86_64-linux" "aarch64-linux" ];
-        
+  outputs = { self, nixpkgs, flake-utils, naersk, ... }:         
   flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
