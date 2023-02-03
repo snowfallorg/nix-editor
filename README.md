@@ -42,8 +42,8 @@ Options:
   -o, --output <OUTPUT>  Output file for modified config or read value
   -r, --raw              Prints console output without newlines or trimmed output
   -f, --format           Formats output using nixpkgs-fmt. Helps when writing new values
-  -h, --help             Print help information
-  -V, --version          Print version information
+  -h, --help             Print help
+  -V, --version          Print version
 ```
 [coveralls badge]: https://img.shields.io/coveralls/github/vlinkz/nix-editor?style=for-the-badge
 [coveralls]: https://coveralls.io/github/vlinkz/nix-editor
