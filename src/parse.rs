@@ -54,11 +54,8 @@ pub fn findattr(configbase: &SyntaxNode, name: &str) -> Option<SyntaxNode> {
                             }
                         }
                     } else if qkey.len() < key.len() && qkey == key[0..qkey.len()] {
-                        match child.last_child() {
-                            Some(x) => {
-                                childvec.push((key[qkey.len()..].join("."), x.to_string()));
-                            }
-                            None => {}
+                        if let Some(x) = child.last_child() {
+                            childvec.push((key[qkey.len()..].join("."), x.to_string()));
                         }
                     }
                 }
@@ -107,7 +104,6 @@ pub fn get_collection(f: String) -> Result<HashMap<String, String>, ReadError> {
 }
 
 pub fn collectattrs(configbase: &SyntaxNode, map: &mut HashMap<String, String>)
-/*-> HashMap<String, String>*/
 {
     for child in configbase.children() {
         if child.kind() == SyntaxKind::NODE_ATTRPATH_VALUE {
@@ -151,11 +147,8 @@ pub fn getcfgbase(node: &SyntaxNode) -> Option<SyntaxNode> {
         }
     }
     for child in node.children() {
-        match getcfgbase(&child) {
-            Some(x) => {
-                return Some(x);
-            }
-            None => {}
+        if let Some(x) = getcfgbase(&child) {
+            return Some(x);
         }
     }
     None

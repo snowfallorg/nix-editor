@@ -61,38 +61,32 @@ pub fn write(f: &str, query: &str, val: &str) -> Result<String, WriteError> {
 fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
     let mut index = configbase.green().children().len() - 2;
     // To find a better index for insertion, first find a matching node, then find the next newline token, after that, insert
-    match matchval(configbase, query, query.split('.').count()) {
-        Some(x) => {
-            let i = configbase
-                .green()
-                .children()
-                .position(|y| match y.into_node() {
-                    Some(y) => y.to_owned() == x.green().into_owned(),
-                    None => false,
-                })
-                .unwrap();
-            let configgreen = configbase.green().to_owned();
-            let configafter = &configgreen.children().collect::<Vec<_>>()[i..];
-            for child in configafter {
-                match child.as_token() {
-                    Some(x) => {
-                        if x.text().contains('\n') {
-                            let cas = configafter.to_vec();
-                            index = i + cas
-                                .iter()
-                                .position(|y| match y.as_token() {
-                                    Some(t) => t == x,
-                                    None => false,
-                                })
-                                .unwrap();
-                            break;
-                        }
-                    }
-                    None => {}
+    if let Some(x) = matchval(configbase, query, query.split('.').count()) {
+        let i = configbase
+            .green()
+            .children()
+            .position(|y| match y.into_node() {
+                Some(y) => y.to_owned() == x.green().into_owned(),
+                None => false,
+            })
+            .unwrap();
+        let configgreen = configbase.green().to_owned();
+        let configafter = &configgreen.children().collect::<Vec<_>>()[i..];
+        for child in configafter {
+            if let Some(x) = child.as_token() {
+                if x.text().contains('\n') {
+                    let cas = configafter.to_vec();
+                    index = i + cas
+                        .iter()
+                        .position(|y| match y.as_token() {
+                            Some(t) => t == x,
+                            None => false,
+                        })
+                        .unwrap();
+                    break;
                 }
             }
         }
-        None => {}
     }
     let input = rnix::Root::parse(format!("\n  {} = {};", &query, &val).as_str())
         .syntax();
@@ -141,11 +135,8 @@ fn findattrset(
                             let subkey = &qkey[key.len()..].join(".").to_string();
                             let newbase = getcfgbase(&child).unwrap();
                             let subattr = findattrset(&newbase, subkey, spaces + 2);
-                            match subattr {
-                                Some((node, _, spaces)) => {
-                                    return Some((node, name.to_string(), spaces));
-                                }
-                                None => {}
+                            if let Some((node, _, spaces)) = subattr {
+                                return Some((node, name.to_string(), spaces));
                             }
                         }
                     }
@@ -390,14 +381,11 @@ fn rmarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
                 for c in replace.children() {
                     v.push(c);
                 }
-                match v.get(i - acc - 1).unwrap().as_token() {
-                    Some(x) => {
-                        if x.to_string().contains('\n') {
-                            replace = replace.remove_child(i - acc - 1);
-                            acc += 1;
-                        }
+                if let Some(x) = v.get(i - acc - 1).unwrap().as_token() {
+                    if x.to_string().contains('\n') {
+                        replace = replace.remove_child(i - acc - 1);
+                        acc += 1;
                     }
-                    None => {}
                 }
                 acc += 1;
             }
