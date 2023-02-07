@@ -3,33 +3,36 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
-    naersk.url = "github:nix-community/naersk";
-    flake-compat = {
-      url = "github:edolstra/flake-compat";
-      flake = false;
-    };
+    utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils, naersk, ... }:         
-  flake-utils.lib.eachDefaultSystem (system:
+  outputs = { self, nixpkgs, utils, ... }:
+    utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        naersk-lib = naersk.lib."${system}";
+        name = "nix-editor";
       in
-  {
-    packages.nixeditor = naersk-lib.buildPackage {
-      pname = "nix-editor";
-      root = ./.;
-      };
+      rec
+      {
+        packages.${name} = pkgs.callPackage ./default.nix {
+          inherit (inputs);
+        };
 
-    defaultPackage = self.packages.${system}.nixeditor;
+        # `nix build`
+        defaultPackage = packages.${name};
 
-    checks = self.packages.${system};
-    hydraJobs = self.packages.${system};
+        # `nix run`
+        apps.${name} = utils.lib.mkApp {
+          inherit name;
+          drv = packages.${name};
+        };
+        defaultApp = apps.${name};
 
-    devShell = pkgs.mkShell {
-          buildInputs = with pkgs; [ 
+        checks = self.packages.${system};
+        hydraJobs = self.packages.${system};
+
+        devShell = pkgs.mkShell {
+          buildInputs = with pkgs; [
             rust-analyzer
             rustc
             rustfmt
@@ -38,5 +41,5 @@
             clippy
           ];
         };
-  });
+      });
 }
