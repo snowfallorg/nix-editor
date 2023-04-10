@@ -1,8 +1,7 @@
-use std::collections::HashMap;
-
 use crate::parse::{findattr, getcfgbase, getkey};
-use thiserror::Error;
 use rnix::{self, SyntaxKind, SyntaxNode};
+use std::collections::HashMap;
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum WriteError {
@@ -24,14 +23,14 @@ pub fn write(f: &str, query: &str, val: &str) -> Result<String, WriteError> {
             return Err(WriteError::ParseError);
         }
     };
-    if val.trim_start().starts_with('{') && val.trim_end().ends_with('}'){
+    if val.trim_start().starts_with('{') && val.trim_end().ends_with('}') {
         if let Some(x) = getcfgbase(&rnix::Root::parse(val).syntax()) {
             if x.kind() == SyntaxKind::NODE_ATTR_SET {
                 return addattrval(f, &configbase, query, &x);
             }
         }
     }
-    
+
     let outnode = match findattr(&configbase, query) {
         Some(x) => {
             if let Some(n) = x.children().last() {
@@ -46,12 +45,16 @@ pub fn write(f: &str, query: &str, val: &str) -> Result<String, WriteError> {
             y.pop();
             let x = findattrset(&configbase, &y.join("."), 0);
             match x {
-                Some((base, v, spaces)) => addvalue(
-                    &base,
-                    &format!("{}{}", " ".repeat(spaces), &query[v.len() + 1..]),
-                    val,
-                ),
-                None => addvalue(&configbase, query, val),
+                Some((base, attr_prefix, spaces)) => {
+                    if let Some(stripped) = query.strip_prefix(&format!("{}.", attr_prefix)) {
+                        addvalue(&base, &format!("{}{}", " ".repeat(spaces), stripped), val)
+                    } else {
+                        addvalue(&configbase, query, val)
+                    }
+                }
+                None => {
+                    addvalue(&configbase, query, val)
+                }
             }
         }
     };
@@ -70,7 +73,7 @@ fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
                 None => false,
             })
             .unwrap();
-        let configgreen = configbase.green().to_owned();
+        let configgreen = configbase.green().clone();
         let configafter = &configgreen.children().collect::<Vec<_>>()[i..];
         for child in configafter {
             if let Some(x) = child.as_token() {
@@ -88,11 +91,8 @@ fn addvalue(configbase: &SyntaxNode, query: &str, val: &str) -> SyntaxNode {
             }
         }
     }
-    let input = rnix::Root::parse(format!("\n  {} = {};", &query, &val).as_str())
-        .syntax();
-    let input = input
-        .green()
-        .to_owned();
+    let input = rnix::Root::parse(format!("\n  {} = {};", &query, &val).as_str()).syntax();
+    let input = input.green().clone();
     if index == 0 {
         index += 1;
     };
@@ -111,37 +111,57 @@ fn findattrset(
 ) -> Option<(SyntaxNode, String, usize)> {
     for child in configbase.children() {
         if child.kind() == SyntaxKind::NODE_ATTRPATH_VALUE {
-            // Now we have to read all the indent values from the key
             for subchild in child.children() {
                 if subchild.kind() == SyntaxKind::NODE_ATTRPATH {
-                    // We have a key, now we need to check if it's the one we're looking for
                     let key = getkey(&subchild);
                     let qkey = name
                         .split('.')
                         .map(|s| s.to_string())
                         .collect::<Vec<String>>();
                     if qkey == key {
-                        // We have key, now lets find the attrset
-                        for possibleset in child.children() {
-                            if possibleset.kind() == SyntaxKind::NODE_ATTR_SET {
-                                return Some((possibleset, name.to_string(), spaces + 2));
+                        match findnestedattrset(&child) {
+                            Some(x) => {
+                                return Some((x, name.to_string(), spaces + 2));
+                            }
+                            None => {
+                                return None;
                             }
                         }
-                        return None;
-                    } else if qkey.len() > key.len() {
-                        // We have a subkey, so we need to recurse
-                        if key == qkey[0..key.len()] {
-                            // We have a subkey, so we need to recurse
-                            let subkey = &qkey[key.len()..].join(".").to_string();
-                            let newbase = getcfgbase(&child).unwrap();
-                            let subattr = findattrset(&newbase, subkey, spaces + 2);
-                            if let Some((node, _, spaces)) = subattr {
+                    } else if qkey.len() > key.len() && qkey[0..key.len()] == key {
+                        let subkey = qkey[key.len()..].join(".");
+                        let newbase = getcfgbase(&child).unwrap();
+                        let subattr = findattrset(&newbase, &subkey, spaces + 2);
+                        match subattr {
+                            Some((node, _, spaces)) => {
                                 return Some((node, name.to_string(), spaces));
+                            }
+                            None => match findnestedattrset(&child) {
+                                Some(x) => {
+                                    return Some((x, key.join("."), spaces + 2));
+                                }
+                                None => {
+                                    return None;
+                                }
                             }
                         }
                     }
                 }
             }
+        }
+    }
+    None
+}
+
+// Recursively check children of NODE_APPLY and NODE_LAMBDA for NODE_ATTR_SET
+fn findnestedattrset(configbase: &SyntaxNode) -> Option<SyntaxNode> {
+    for child in configbase.children() {
+        if child.kind() == SyntaxKind::NODE_APPLY
+            || child.kind() == SyntaxKind::NODE_LAMBDA
+            || child.kind() == SyntaxKind::NODE_WITH
+        {
+            return findnestedattrset(&child);
+        } else if child.kind() == SyntaxKind::NODE_ATTR_SET {
+            return Some(child);
         }
     }
     None
@@ -212,18 +232,19 @@ fn addattrval(
     buildattrvec(val, vec![], &mut attrmap);
     let mut file = f.to_string();
 
-    if attrmap.iter().any(|(key, _)| findattr(configbase, &format!("{}.{}", query, key)).is_some()) {
+    if attrmap
+        .iter()
+        .any(|(key, _)| findattr(configbase, &format!("{}.{}", query, key)).is_some())
+    {
         for (key, val) in attrmap {
             match write(&file, &format!("{}.{}", query, key), &val) {
-                Ok(x) => {
-                    file = x
-                },
+                Ok(x) => file = x,
                 Err(e) => return Err(e),
             }
         }
     } else if let Some(c) = getcfgbase(&rnix::Root::parse(&file).syntax()) {
         file = addvalue(&c, query, &val.to_string()).to_string();
-    }    
+    }
     Ok(file)
 }
 
@@ -355,7 +376,7 @@ fn rmarr_aux(node: &SyntaxNode, items: Vec<String>) -> Option<SyntaxNode> {
             let green = child.green().into_owned();
             let mut idx = vec![];
             for elem in green.children() {
-                if elem.as_node() != None && items.contains(&elem.to_string()) {
+                if elem.as_node().is_some() && items.contains(&elem.to_string()) {
                     let index = match green.children().position(|x| match x.into_node() {
                         Some(x) => {
                             if let Some(y) = elem.as_node() {

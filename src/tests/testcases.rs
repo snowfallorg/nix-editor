@@ -267,7 +267,7 @@ fn write_val6() {
 
     // Check if read value is false
     assert_eq!(r, "{\n  y = false;\n  z = \"test\";\n}");
-    assert_eq!(out, "{\n  a = {\n    b = true;\n  };\n  a.c = {\n    d = \"test\";\n  };\n  x = { y = false; z = \"test\"; };\n}")
+    assert_eq!(out.trim(), "{\n  a = {\n    b = true;\n  };\n  a.c = {\n    d = \"test\";\n  };\n  x = { y = false; z = \"test\"; };\n}")
 }
 
 #[test]
@@ -300,7 +300,7 @@ fn write_format1() {
     c = false;
   };
 }"#;
-    assert_eq!(out, expectedout.to_string())
+    assert_eq!(out.trim(), expectedout.to_string().trim())
 }
 
 #[test]
@@ -333,7 +333,7 @@ fn write_format2() {
     };
   };
 }"#;
-    assert_eq!(out, expectedout.to_string())
+    assert_eq!(out.trim(), expectedout.to_string().trim())
 }
 
 #[test]
@@ -532,4 +532,19 @@ fn collect2() {
     assert_eq!(out.get("boot.loader.efi.canTouchEfiVariables"), Some(&String::from("true")));
     assert_eq!(out.get("programs.gnupg.agent.enableSSHSupport"), Some(&String::from("true")));
     assert_eq!(out.get("system.stateVersion"), Some(&String::from("\"22.05\"")));
+}
+
+#[test]
+fn write_val_internal1() {
+    let config =
+        fs::read_to_string(Path::new("src/tests/format3.nix")).expect("Failed to read file");
+    
+    // Write value to file that does not yet exist
+    let out = match write(&config, "a.c.b", "true") {
+        Ok(s) => s,
+        Err(_) => panic!("Failed to write to file"),
+    };
+
+    // Check if read value is correct
+    assert_eq!(out.trim(), "{\n  a = {\n    b = true;\n    c.b = true;\n  };\n}");
 }
