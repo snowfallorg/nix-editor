@@ -14,17 +14,17 @@ A command line utility for modifying NixOS configuration values.
 ## Installation
 ### nix-env
 ```
-git clone https://github.com/vlinkz/nix-editor
+git clone https://github.com/snowfallorg/nix-editor
 nix-env -f nix-editor -i nix-editor
 ```
 ### nix profile
 ```
-nix profile install github:vlinkz/nix-editor
+nix profile install github:snowfallorg/nix-editor
 ```
 
 ## Run with Nix Flakes
 ```
-nix run github:vlinkz/nix-editor -- --help
+nix run github:snowfallorg/nix-editor -- --help
 ```
 
 ```
