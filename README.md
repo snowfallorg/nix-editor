@@ -22,17 +22,18 @@ nix-env -f nix-editor -i nix-editor
 nix profile install github:snowfallorg/nix-editor
 ```
 
-## Run with Nix Flakes
+### Run with Nix Flakes
 ```
 nix run github:snowfallorg/nix-editor -- --help
 ```
 
+### Usage:
 ```
-Usage: nix-editor [OPTIONS] <FILE> <ATTRIBUTE>
+nix-editor [OPTIONS] <FILE> <ATTRIBUTE>
 
 Arguments:
   <FILE>       Configuration file to read
-  <ATTRIBUTE>  Nix configuration option arribute
+  <ATTRIBUTE>  Nix configuration option attribute
 
 Options:
   -v, --val <VAL>        Value to write
