@@ -288,7 +288,7 @@ pub fn addtoarr(f: &str, query: &str, items: Vec<String>) -> Result<String, Writ
             Some(x) => x,
             None => return Err(WriteError::ArrayError),
         },
-        // If no arrtibute is found, create a new one
+        // If no attribute is found, create a new one
         None => {
             let newval = addvalue(&configbase, query, "[\n  ]");
             return addtoarr(&newval.to_string(), query, items);
