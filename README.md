@@ -19,7 +19,7 @@ nix-env -f nix-editor -i nix-editor
 ```
 ### nix profile
 ```
-nix profile install github:snowfallorg/nix-editor
+nix profile add github:snowfallorg/nix-editor
 ```
 
 ### Run with Nix Flakes
