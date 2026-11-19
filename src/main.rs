@@ -2,15 +2,16 @@ use clap::{self, ArgGroup, Parser};
 use nix_editor::{write::addtoarr, write::deref, write::write};
 use owo_colors::*;
 use std::{fs, io::Write};
+use nix_editor::write::rmarr;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
-#[command(group(ArgGroup::new("write").args(&["val", "deref", "arr"])))]
+#[command(group(ArgGroup::new("write").args(&["val", "deref", "arr", "remove_from_array"])))]
 struct Args {
     /// Configuration file to read
     file: String,
 
-    /// Nix configuration option arribute
+    /// Nix configuration option attribute
     attribute: String,
 
     /// Value to write
@@ -24,6 +25,10 @@ struct Args {
     /// Dereference the value of the attribute
     #[arg(short, long)]
     deref: bool,
+
+    /// Element to remove from array
+    #[arg(long)]
+    remove_from_array: Option<String>,
 
     /// Edit the file in-place
     #[arg(short, long)]
@@ -146,6 +151,14 @@ fn main() {
     };
     if args.arr.is_some() {
         output = match addtoarr(&f, &args.attribute, vec![args.arr.unwrap()]) {
+            Ok(x) => x,
+            Err(e) => {
+                writeerr(e, &args.file, &args.attribute);
+                std::process::exit(1)
+            }
+        };
+    } else if args.remove_from_array.is_some() {
+        output = match rmarr(&f, &args.attribute, vec![args.remove_from_array.unwrap()]) {
             Ok(x) => x,
             Err(e) => {
                 writeerr(e, &args.file, &args.attribute);
